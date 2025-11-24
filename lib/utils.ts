@@ -9,12 +9,19 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-export const getTimestamp = (createdAt: Date): string => {
-  const now = new Date();
-  const timeDifference = now.getTime() - createdAt.getTime();
+export const getTimestamp = (createdAt: Date, now?: Date): string => {
+  // Use provided now time or current time
+  const currentTime = now || new Date();
+  
+  // Round to nearest minute to prevent hydration mismatches
+  // This ensures server and client render the same value even with timing differences
+  const minute = 60 * 1000;
+  const nowRounded = new Date(Math.floor(currentTime.getTime() / minute) * minute);
+  const createdAtRounded = new Date(Math.floor(createdAt.getTime() / minute) * minute);
+  
+  const timeDifference = nowRounded.getTime() - createdAtRounded.getTime();
 
   // Define time intervals in milliseconds
-  const minute = 60 * 1000;
   const hour = 60 * minute;
   const day = 24 * hour;
   const week = 7 * day;
@@ -22,8 +29,8 @@ export const getTimestamp = (createdAt: Date): string => {
   const year = 365 * day;
 
   if (timeDifference < minute) {
-    const seconds = Math.floor(timeDifference / 1000);
-    return `${seconds} ${seconds === 1 ? 'second' : 'seconds'} ago`;
+    // For posts less than 1 minute old, show "just now" to avoid hydration issues
+    return "just now";
   } else if (timeDifference < hour) {
     const minutes = Math.floor(timeDifference / minute);
     return `${minutes} ${minutes === 1 ? 'minute' : 'minutes'} ago`;

@@ -51,7 +51,7 @@ const AllAnswers = async ({questionId, userId, totalAnswers, page, filter} :Prop
                                 {answer.author.name}
                                 </p>
 
-                                <p className="small-regular text-light400_light500 ml-0.5 mt-0.5 line-clamp-1">
+                                <p className="small-regular text-light400_light500 ml-0.5 mt-0.5 line-clamp-1" suppressHydrationWarning>
                                 answered { " " }
                                 {getTimestamp(answer.createdAt)}
                                 </p>
