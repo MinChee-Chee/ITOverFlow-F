@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import React from "react";
-import RenderTag from "./Rendertag";
+import TagCard from "@/components/cards/TagCard";
 import { getTopPopularTags } from "@/lib/actions/tag.actions";
 import { getHotQuestions } from "@/lib/actions/question.action";
 
@@ -37,12 +37,13 @@ const RightSidebar = async () => {
         <h3 className="h3-bold text-dark200_light900">Popular Tags</h3>
         <div className="mt-5 flex flex-col gap-4">
           {popularTags.map((tag) => (
-            <RenderTag
+            <TagCard
               key={tag._id}
               _id={tag._id}
               name={tag.name}
-              totalQuestions={tag.numberOfQuestions}
+              questions={tag.numberOfQuestions}
               showCount
+              compact
             />
           ))}
         </div>

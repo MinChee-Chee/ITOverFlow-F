@@ -3,7 +3,7 @@ import Answer from "@/components/forms/Answer";
 import AllAnswers from "@/components/shared/AllAnswers";
 import Metric from "@/components/shared/Metric";
 import ParseHTML from "@/components/shared/ParseHTML";
-import RenderTag from "@/components/shared/Rendertag";
+import TagCard from "@/components/cards/TagCard";
 import Votes from "@/components/shared/Votes";
 import { getQuestionById } from "@/lib/actions/question.action";
 import { getUserById } from "@/lib/actions/user.action";
@@ -82,11 +82,11 @@ const Question = async ({params, searchParams}: any) => {
 
     <div className="mt-8 flex flex-wrap gap-2">
       {result.tags.map((tag: any) => (
-        <RenderTag
+        <TagCard
         key={tag._id}
         _id={tag._id}
         name={tag.name}
-        showCount={false}
+        compact
         />
       ))}
     </div>

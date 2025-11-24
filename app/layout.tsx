@@ -5,6 +5,8 @@ import type {Metadata} from 'next'
 import React from 'react'
 import { ThemeProvider } from '@/context/ThemeProvider';
 import '../styles/prism.css'
+import 'devicon/devicon-base.css'
+import 'devicon/devicon.min.css'
 import { Analytics } from "@vercel/analytics/react"
 
 const inter = Inter({

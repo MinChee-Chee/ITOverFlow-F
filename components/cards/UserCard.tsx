@@ -3,7 +3,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import React from 'react'
 import { Badge } from '../ui/badge';
-import RenderTag from '../shared/Rendertag';
+import TagCard from './TagCard';
 
 interface Props {
     user: {
@@ -40,10 +40,11 @@ interface Props {
             {interactedTags.length > 0 ? (
               <div className="flex items-center gap-2">
                   {interactedTags.map((tag) => (
-                    <RenderTag 
+                    <TagCard 
                      key={tag._id}
                      _id={tag._id}
                      name={tag.name}
+                     compact
                     />
                   ))}
               </div>

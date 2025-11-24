@@ -4,10 +4,19 @@ import { twMerge } from "tailwind-merge"
 import qs from "query-string"
 import { BADGE_CRITERIA } from "@/constants";
 import { BadgeCounts } from "@/types";
+import { techMap } from "@/constants/techMap";
  
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
+
+export const getDeviconClassName = (techName: string) => {
+  const normalizedTechName = techName.replace(/[ .]/g, "").toLowerCase();
+
+  return techMap[normalizedTechName]
+    ? `${techMap[normalizedTechName]} colored`
+    : "devicon-devicon-plain";
+};
 
 export const getTimestamp = (createdAt: Date, now?: Date): string => {
   // Use provided now time or current time

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import React from "react";
-import RenderTag from "../shared/Rendertag";
+import TagCard from "./TagCard";
 import Metric from "../shared/Metric";
 import { formatAndDivideNumber, getTimestamp } from "@/lib/utils";
 import { SignedIn } from "@clerk/nextjs";
@@ -65,7 +65,7 @@ const QuestionCard = ({
 
       <div className="mt-3.5 flex flex-wrap gap-2">
         {tags.map((tag) => (
-          <RenderTag key={tag._id} _id={tag._id} name={tag.name} />
+          <TagCard key={tag._id} _id={tag._id} name={tag.name} compact />
         ))}
       </div>
 
