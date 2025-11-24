@@ -52,7 +52,7 @@ export const POST = async (request: Request) => {
   
       // Use Google Gemini API key from environment or fallback to provided key
       // The SDK can read from GEMINI_API_KEY env var automatically, or we can pass it
-      const geminiApiKey = process.env.GOOGLE_GEMINI_API_KEY || process.env.GEMINI_API_KEY || 'AIzaSyAKd4Gi6q4QfG5-pEYkq4U-uzeMKVJChKs';
+      const geminiApiKey = process.env.GOOGLE_GEMINI_API_KEY || process.env.GEMINI_API_KEY;
       
       // Initialize Google GenAI client
       // SDK reads from GEMINI_API_KEY env var by default, or we can pass apiKey
