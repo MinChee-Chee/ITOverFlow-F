@@ -17,8 +17,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { Button } from "../ui/button"
 import { QuestionsSchema } from "@/lib/validiations";
-import { Badge } from '../ui/badge';
-import Image from 'next/image';
+import TagCard from '@/components/cards/TagCard';
 import { createQuestion, editQuestion } from '@/lib/actions/question.action';
 import { useRouter, usePathname } from 'next/navigation';
 import { useTheme } from '@/context/ThemeProvider';
@@ -217,22 +216,15 @@ const Question = ({type, mongoUserId, questionDetails }: Props) => {
                   {field.value.length > 0 && (
                     <div className="flex-start mt-2.5 gap-2.5">
                       {field.value.map((tag: string) => (
-                        <Badge
+                        <TagCard
                           key={tag}
-                          className="subtle-medium background-light800_dark300 text-light400_light500 flex items-center justify-center gap-2 rounded-md border-none px-4 py-2 capitalize"
-                          onClick={() => type !== 'Edit' ? handleTagRemove(tag, field) :
-                            () => {}
-                          }
-                        >
-                          {tag}
-                          { type !== 'Edit' && (<Image
-                            src="/assets/icons/close.svg"
-                            alt="Close icon"
-                            width={12}
-                            height={12}
-                            className="cursor-pointer object-contain invert-0 dark:invert"
-                          />)}
-                        </Badge>
+                          _id={tag}
+                          name={tag}
+                          compact
+                          isButton={true}
+                          remove={type !== 'Edit'}
+                          handleRemove={() => handleTagRemove(tag, field)}
+                        />
                       ))}
                     </div>
                   )}

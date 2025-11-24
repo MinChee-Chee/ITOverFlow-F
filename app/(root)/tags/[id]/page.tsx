@@ -4,6 +4,7 @@ import Pagination from '@/components/shared/Pagination';
 import LocalSearchbar from '@/components/shared/search/LocalSearchbar';
 import { getQuestionsByTagId } from '@/lib/actions/tag.actions';
 import { URLProps } from '@/types';
+import { getDeviconClassName } from '@/lib/utils';
 import React from 'react'
 interface IQuestion {
   _id: string;
@@ -31,9 +32,14 @@ const Page = async ({ params, searchParams}: URLProps) => {
     searchQuery: searchParams.q,
     page: searchParams.page ? +searchParams.page : 1,
   });
+  const iconClass = getDeviconClassName(result.tagTitle);
+  
   return (
     <>
-        <h1 className="h1-bold text-dark100_light900">{result.tagTitle}</h1> 
+        <h1 className="h1-bold text-dark100_light900 flex items-center gap-3">
+          <i className={`${iconClass} text-2xl`}></i>
+          {result.tagTitle}
+        </h1> 
 
       <div className="mt-11 w-full">
         <LocalSearchbar 
