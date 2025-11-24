@@ -86,7 +86,17 @@ const Question = ({type, mongoUserId, questionDetails }: Props) => {
       }
       
     } catch (error) {
-      
+      console.error(error);
+      const description =
+        error instanceof Error
+          ? error.message
+          : "Something went wrong. Please try again.";
+
+      toast({
+        title: "Failed to submit question",
+        description,
+        variant: "destructive",
+      });
     } finally {
       setIsSubmitting(false);
     }

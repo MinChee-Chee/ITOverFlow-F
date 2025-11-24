@@ -78,7 +78,7 @@ export const POST = async (request: Request) => {
           console.log(`Trying model: ${model}`);
           
           const response = await ai.models.generateContent({
-            model: model,
+            model,
             contents: `You are a helpful assistant that provides clear and concise summaries of technical questions and their answers.\n\n${prompt}`,
           });
 

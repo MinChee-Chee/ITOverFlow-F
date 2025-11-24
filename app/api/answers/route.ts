@@ -37,18 +37,20 @@ export async function GET(request: Request) {
         }
       }
     );
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error fetching answers:", error);
+    const message =
+      error instanceof Error ? error.message : "Failed to fetch answers";
     return NextResponse.json(
-      { 
-        error: error.message || "Failed to fetch answers",
-        answers: []
+      {
+        error: message,
+        answers: [],
       },
-      { 
+      {
         status: 500,
         headers: {
-          'Content-Type': 'application/json',
-        }
+          "Content-Type": "application/json",
+        },
       }
     );
   }

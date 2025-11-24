@@ -278,7 +278,7 @@ const Answer = ({question, questionTitle, questionId, authorId}: Props) => {
     </Form>
 
     <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto custom-scrollbar">
+      <DialogContent className="custom-scrollbar max-h-[80vh] max-w-2xl overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Question Summary</DialogTitle>
           <DialogDescription>
