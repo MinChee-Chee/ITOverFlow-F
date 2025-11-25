@@ -11,7 +11,7 @@ import { notifyUserByClerkId } from "../push-notifications";
 
 export async function createAnswer(params: CreateAnswerParams) {
   try {
-    connectToDatabase();
+    await connectToDatabase();
 
     const { content, author, question, path } = params;
 
@@ -42,7 +42,8 @@ export async function createAnswer(params: CreateAnswerParams) {
     ) {
       const questionOwner = await User.findById(questionObject.author);
 
-      await notifyUserByClerkId({
+      // Send notification non-blocking - don't let notification failures affect answer creation
+      notifyUserByClerkId({
         clerkId: questionOwner?.clerkId,
         title: `${answeringUser?.name ?? "Someone"} replied to your question`,
         body: `A new answer was just posted on "${questionObject.title}".`,
@@ -52,6 +53,9 @@ export async function createAnswer(params: CreateAnswerParams) {
           questionId: question.toString(),
           answerId: newAnswer._id.toString(),
         },
+      }).catch((error) => {
+        // Log notification errors but don't throw - notifications are non-critical
+        console.error("[Answer] Failed to send notification:", error);
       });
     }
 

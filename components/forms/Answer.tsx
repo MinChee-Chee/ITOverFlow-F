@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client"
-import React, { useState } from 'react'
+import React, { useState, useMemo } from 'react'
 import { Form, FormControl, FormField, FormItem, FormMessage } from '../ui/form'
 import { useForm } from 'react-hook-form'
 import { AnswerSchema } from '@/lib/validiations'
@@ -14,6 +14,7 @@ import { createAnswer } from '@/lib/actions/answer.action'
 import { usePathname } from 'next/navigation'
 import { toast } from '@/hooks/use-toast'
 import useSWR from 'swr'
+import { fetcher } from '@/lib/utils'
 import {
   Dialog,
   DialogContent,
@@ -39,14 +40,33 @@ const Answer = ({question, questionTitle, questionId, authorId}: Props) => {
     const {mode} = useTheme()
     const editorRef = React.useRef(null)
     
-    // Parse questionId for SWR key
-    const parsedQuestionId = typeof questionId === 'string' && questionId.startsWith('"') 
-      ? JSON.parse(questionId) 
-      : questionId;
+    // Parse questionId consistently - always parse if it's a JSON string
+    const parsedQuestionId = useMemo(() => {
+      if (typeof questionId === 'string') {
+        // Check if it's a JSON string (starts and ends with quotes)
+        if (questionId.startsWith('"') && questionId.endsWith('"')) {
+          return JSON.parse(questionId);
+        }
+        // If it's already a plain string, use it as is
+        return questionId;
+      }
+      // If it's not a string, return as is (shouldn't happen, but safe)
+      return questionId;
+    }, [questionId]);
+    
+    // Get string version for API calls (SWR key needs a string)
+    const questionIdString = useMemo(() => {
+      if (typeof parsedQuestionId === 'string') {
+        return parsedQuestionId;
+      }
+      // If it's an object, convert to string
+      return String(parsedQuestionId);
+    }, [parsedQuestionId]);
     
     // Use SWR to fetch answers - shows cached data immediately while fetching updates
     const { data: answersData, error: answersError, isLoading: isLoadingAnswers } = useSWR(
-      parsedQuestionId ? `/api/answers?questionId=${parsedQuestionId}` : null,
+      questionIdString ? `/api/answers?questionId=${questionIdString}` : null,
+      fetcher,
       { 
         revalidateOnFocus: false,
         revalidateOnReconnect: true,
@@ -70,10 +90,15 @@ const Answer = ({question, questionTitle, questionId, authorId}: Props) => {
       setIsSubmitting(true);
   
       try {
+        // Parse authorId and questionId consistently
+        const parsedAuthorId = typeof authorId === 'string' && authorId.startsWith('"')
+          ? JSON.parse(authorId)
+          : authorId;
+        
         await createAnswer({
           content: values.answer,
-          author: JSON.parse(authorId),
-          question: JSON.parse(questionId),
+          author: parsedAuthorId,
+          question: parsedQuestionId,
           path: pathname,
         });
   
@@ -114,25 +139,28 @@ const Answer = ({question, questionTitle, questionId, authorId}: Props) => {
         });
       }
     
+      // Check if answers data is available before opening dialog
+      if (answersError) {
+        return toast({
+          title: 'Error',
+          description: 'Failed to fetch answers. Please try again.',
+          variant: 'destructive'
+        });
+      }
+      
+      // Don't open dialog if answers are still loading
+      if (isLoadingAnswers || !answersData) {
+        return toast({
+          title: 'Loading answers...',
+          description: 'Please wait while we fetch the answers, then try again.',
+        });
+      }
+    
+      // Data is available, proceed with summary generation
       setIsSubmittingAI(true);
       setIsDialogOpen(true);
     
       try {
-        // Use SWR data if available, otherwise show error
-        if (answersError) {
-          throw new Error('Failed to fetch answers');
-        }
-        
-        // Wait for answers data if not yet loaded
-        if (isLoadingAnswers || !answersData) {
-          // SWR will handle the loading, but we can show a message
-          toast({
-            title: 'Loading answers...',
-            description: 'Please wait while we fetch the answers',
-          });
-          return;
-        }
-        
         const answers = answersData.answers || [];
     
         // Call Google Gemini API for summary

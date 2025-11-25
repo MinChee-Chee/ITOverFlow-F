@@ -164,12 +164,16 @@ export async function upvoteQuestion(params: QuestionVoteParams) {
     }
 
     if (!hasupVoted) {
-      await notifyQuestionOwnerAboutVote({
+      // Send notification non-blocking - don't let notification failures affect voting
+      notifyQuestionOwnerAboutVote({
         questionId,
         questionTitle: question.title,
         questionAuthorId: question.author.toString(),
         actorId: userId,
         voteType: "upvote",
+      }).catch((error) => {
+        // Log notification errors but don't throw - notifications are non-critical
+        console.error("[Question] Failed to send upvote notification:", error);
       });
     }
 
@@ -215,12 +219,16 @@ export async function downvoteQuestion(params: QuestionVoteParams) {
     }
 
     if (!hasdownVoted) {
-      await notifyQuestionOwnerAboutVote({
+      // Send notification non-blocking - don't let notification failures affect voting
+      notifyQuestionOwnerAboutVote({
         questionId,
         questionTitle: question.title,
         questionAuthorId: question.author.toString(),
         actorId: userId,
         voteType: "downvote",
+      }).catch((error) => {
+        // Log notification errors but don't throw - notifications are non-critical
+        console.error("[Question] Failed to send downvote notification:", error);
       });
     }
 

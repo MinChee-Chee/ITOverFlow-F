@@ -16,6 +16,7 @@ interface Props {
   remove?: boolean;
   isButton?: boolean;
   handleRemove?: () => void;
+  noLink?: boolean; // Disable link when nested inside another link
 }
 
 const TagCard = ({
@@ -27,6 +28,7 @@ const TagCard = ({
   remove,
   isButton,
   handleRemove,
+  noLink,
 }: Props) => {
   const iconClass = getDeviconClassName(name);
 
@@ -64,11 +66,24 @@ const TagCard = ({
   const isCompact = compact !== false;
 
   if (isCompact) {
-    return isButton ? (
-      <button onClick={handleClick} className="flex justify-between gap-2">
-        {Content}
-      </button>
-    ) : (
+    if (isButton) {
+      return (
+        <button onClick={handleClick} className="flex justify-between gap-2">
+          {Content}
+        </button>
+      );
+    }
+    
+    // If noLink is true, render as div to avoid nested links
+    if (noLink) {
+      return (
+        <div className="flex justify-between gap-2">
+          {Content}
+        </div>
+      );
+    }
+    
+    return (
       <Link href={ROUTES.TAGS(_id)} className="flex justify-between gap-2">
         {Content}
       </Link>

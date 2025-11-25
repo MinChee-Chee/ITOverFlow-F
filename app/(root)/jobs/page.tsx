@@ -4,10 +4,11 @@
 import NoResult from "@/components/shared/NoResult";
 import { Job } from "@/types";
 import useSWR from 'swr';
+import { fetcher } from '@/lib/utils';
 
 export default function Jobs() {
   // Use SWR to fetch jobs - shows cached data immediately while fetching updates
-  const { data, error, isLoading } = useSWR('/api/jobs', {
+  const { data, error, isLoading } = useSWR('/api/jobs', fetcher, {
     refreshInterval: 60000, // Refresh every 60 seconds
     revalidateOnFocus: true,
   });
