@@ -13,6 +13,7 @@ import Image from 'next/image'
 import { createAnswer } from '@/lib/actions/answer.action'
 import { usePathname } from 'next/navigation'
 import { toast } from '@/hooks/use-toast'
+import useSWR from 'swr'
 import {
   Dialog,
   DialogContent,
@@ -37,6 +38,20 @@ const Answer = ({question, questionTitle, questionId, authorId}: Props) => {
     const [summary, setSummary] = useState<string>('')
     const {mode} = useTheme()
     const editorRef = React.useRef(null)
+    
+    // Parse questionId for SWR key
+    const parsedQuestionId = typeof questionId === 'string' && questionId.startsWith('"') 
+      ? JSON.parse(questionId) 
+      : questionId;
+    
+    // Use SWR to fetch answers - shows cached data immediately while fetching updates
+    const { data: answersData, error: answersError, isLoading: isLoadingAnswers } = useSWR(
+      parsedQuestionId ? `/api/answers?questionId=${parsedQuestionId}` : null,
+      { 
+        revalidateOnFocus: false,
+        revalidateOnReconnect: true,
+      }
+    )
     const form = useForm<z.infer<typeof AnswerSchema>>({
         resolver: zodResolver(AnswerSchema),
         defaultValues: {
@@ -103,28 +118,21 @@ const Answer = ({question, questionTitle, questionId, authorId}: Props) => {
       setIsDialogOpen(true);
     
       try {
-        // Parse questionId from JSON string if needed
-        const parsedQuestionId = typeof questionId === 'string' && questionId.startsWith('"') 
-          ? JSON.parse(questionId) 
-          : questionId;
-        
-        // Fetch all answers for this question
-        const answersResponse = await fetch(`/api/answers?questionId=${parsedQuestionId}`);
-        
-        // Check if response is OK
-        if (!answersResponse.ok) {
-          const errorText = await answersResponse.text();
-          throw new Error(`Failed to fetch answers: ${answersResponse.status} - ${errorText}`);
+        // Use SWR data if available, otherwise show error
+        if (answersError) {
+          throw new Error('Failed to fetch answers');
         }
         
-        // Check if response is JSON
-        const contentType = answersResponse.headers.get('content-type');
-        if (!contentType || !contentType.includes('application/json')) {
-          const text = await answersResponse.text();
-          throw new Error(`Expected JSON but got: ${contentType}. Response: ${text.substring(0, 200)}`);
+        // Wait for answers data if not yet loaded
+        if (isLoadingAnswers || !answersData) {
+          // SWR will handle the loading, but we can show a message
+          toast({
+            title: 'Loading answers...',
+            description: 'Please wait while we fetch the answers',
+          });
+          return;
         }
         
-        const answersData = await answersResponse.json();
         const answers = answersData.answers || [];
     
         // Call Google Gemini API for summary

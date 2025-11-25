@@ -4,6 +4,7 @@ import { Inter, Space_Grotesk as SpaceGroktest } from 'next/font/google';
 import type {Metadata} from 'next'
 import React from 'react'
 import { ThemeProvider } from '@/context/ThemeProvider';
+import SWRProvider from '@/components/providers/SWRProvider';
 import '../styles/prism.css'
 import 'devicon/devicon-base.css'
 import 'devicon/devicon.min.css'
@@ -46,8 +47,10 @@ export default function RootLayout({
           >
             
           <ThemeProvider>
-            {children}
-            <Analytics />          
+            <SWRProvider>
+              {children}
+              <Analytics />
+            </SWRProvider>
           </ThemeProvider> 
           </ClerkProvider> 
         </body>

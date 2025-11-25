@@ -1,27 +1,48 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
+'use client'
+
 import NoResult from "@/components/shared/NoResult";
 import { Job } from "@/types";
+import useSWR from 'swr';
 
-export default async function Jobs() {
-  const url =
-    "https://jsearch.p.rapidapi.com/search?query=Node.js%20developer%20in%20New-York%2C%20USA&page=1&num_pages=1&date_posted=all";
-  const options = {
-    method: "GET",
-    headers: {
-      "x-rapidapi-key": "f9dd055560msh19f8a0462b834dep16e693jsn04e287ec0c64",
-      "x-rapidapi-host": "jsearch.p.rapidapi.com",
-    },
-  };
+export default function Jobs() {
+  // Use SWR to fetch jobs - shows cached data immediately while fetching updates
+  const { data, error, isLoading } = useSWR('/api/jobs', {
+    refreshInterval: 60000, // Refresh every 60 seconds
+    revalidateOnFocus: true,
+  });
 
-  let jobs: Job[] = [];
+  const jobs: Job[] = data?.jobs || [];
 
-  try {
-    const response = await fetch(url, options);
-    const result = await response.json();
-    jobs = result.data; // Assuming the API returns jobs under `data`
-    console.log(jobs); // Log the jobs data
-  } catch (error) {
-    console.error(error);
+  // Show initial loading only once
+  if (isLoading && !data) {
+    return (
+      <>
+        <h1 className="h1-bold text-dark100_light900">IT Jobs for UTE Future Devs</h1>
+        <div className="mt-10 flex w-full flex-col gap-6">
+          <div className="text-center py-8">
+            <p className="text-dark400_light700">Loading jobs...</p>
+          </div>
+        </div>
+      </>
+    );
+  }
+
+  // Show error state
+  if (error) {
+    return (
+      <>
+        <h1 className="h1-bold text-dark100_light900">IT Jobs for UTE Future Devs</h1>
+        <div className="mt-10 flex w-full flex-col gap-6">
+          <NoResult
+            title="Error loading jobs"
+            description="Failed to fetch jobs. Please try refreshing the page."
+            link="/"
+            linkTitle="Back to DevOverflow"
+          />
+        </div>
+      </>
+    );
   }
 
   return (
@@ -62,7 +83,7 @@ export default async function Jobs() {
                 <strong>Expiration Date:</strong> {new Date(job.job_offer_expiration_timestamp * 1000).toLocaleDateString()}
               </p>
               <p className="dark:text-gray-300">
-                <strong>Experience Required:</strong> {job.job_required_experience.required_experience_in_months} months
+                <strong>Experience Required:</strong> {job.job_required_experience?.required_experience_in_months || 'N/A'} months
               </p>
               <p className="dark:text-gray-300">
                 <strong>Job Description:</strong> {job.job_description}
@@ -82,7 +103,7 @@ export default async function Jobs() {
           ))
         ) : (
           <NoResult
-            title="There’s no jobs to show"
+            title="There's no jobs to show"
             description="No jobs found right now, but don't worry! New opportunities are posted regularly. Please check back soon."
             link="/"
             linkTitle="Back to DevOverflow"
