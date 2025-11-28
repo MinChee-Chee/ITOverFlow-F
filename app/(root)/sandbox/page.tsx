@@ -239,7 +239,7 @@ const SandboxPage = () => {
       <div className="mb-4 flex flex-wrap gap-2 items-center">
         <div className="flex-1 min-w-[200px]">
           <Select value={selectedLanguageId} onValueChange={handleLanguageChange}>
-            <SelectTrigger className="w-full bg-light-900 dark:bg-dark-300 border-light-800 dark:border-dark-400 text-light-900 dark:text-dark-900">
+            <SelectTrigger className="w-full bg-light-900 dark:bg-dark-300 border-light-800 dark:border-dark-400 text-dark-900 dark:text-light-900">
               <SelectValue placeholder="Select a language" />
             </SelectTrigger>
             <SelectContent className="text-dark400_light700 small-regular border-none bg-light-900 dark:bg-dark-300">
