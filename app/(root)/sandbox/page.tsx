@@ -6,7 +6,7 @@ import PreviewFrame from '@/components/sandbox/PreviewFrame'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Play, RotateCcw, Trash2, Loader2 } from 'lucide-react'
-import { SUPPORTED_LANGUAGES, getLanguageById, type Language } from '@/constants/languages'
+import { SUPPORTED_LANGUAGES, getLanguageById } from '@/constants/languages'
 
 // Default template code for HTML/CSS/JS
 const DEFAULT_HTML = `<div class="container">

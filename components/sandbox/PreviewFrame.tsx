@@ -115,7 +115,7 @@ const PreviewFrame: React.FC<PreviewFrameProps> = ({
             </pre>
           ) : (
             <div className="text-dark-500 dark:text-light-500 body-regular">
-              Click "Run Code" to execute your {language.name} code
+              Click &quot;Run Code&quot; to execute your {language.name} code
             </div>
           )}
         </div>
