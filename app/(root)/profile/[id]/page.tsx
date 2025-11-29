@@ -15,6 +15,7 @@ import Link from 'next/link'
 import React from 'react'
 
 const Profile = async ({ params, searchParams}: URLProps) => {
+  const resolvedSearchParams = await searchParams;
   const { userId : clerkId} = await auth();
   const userInfo = await getUserInfo({userId: params.id})
   return (
@@ -91,14 +92,14 @@ const Profile = async ({ params, searchParams}: URLProps) => {
       <TabsContent value="top-posts" className='mt-5 flex w-full
       flex-col gap-5'>
             <QuestionTab
-            searchParams ={searchParams}
+            searchParams ={resolvedSearchParams}
             userId={userInfo.user._id}
             clerkId ={clerkId} />
       </TabsContent>
       <TabsContent value="answers" className='mt-2 flex w-full
       flex-col gap-4'>
             <AnswerTab
-            searchParams ={searchParams}
+            searchParams ={resolvedSearchParams}
             userId={userInfo.user._id}
             clerkId ={clerkId} 
             />

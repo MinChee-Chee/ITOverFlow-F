@@ -18,10 +18,11 @@ export const metadata: Metadata = {
 export const dynamic = 'force-dynamic';
 
 const Community = async ({searchParams}: SearchParamsProps) => {
+    const resolvedSearchParams = await searchParams;
     const result = await getAllUsers({
-        searchQuery: searchParams.q,
-        filter: searchParams.filter,
-        page: searchParams.page ? +searchParams.page : 1
+        searchQuery: resolvedSearchParams.q,
+        filter: resolvedSearchParams.filter,
+        page: resolvedSearchParams.page ? +resolvedSearchParams.page : 1
     })
 
 
@@ -66,7 +67,7 @@ const Community = async ({searchParams}: SearchParamsProps) => {
       <div className="mt-9">
       <Suspense fallback={<div className="h-10 animate-pulse bg-light-800 dark:bg-dark-300 rounded-md" />}>
         <Pagination
-          pageNumber = {searchParams?.page ? +searchParams.page : 1}
+          pageNumber = {resolvedSearchParams?.page ? +resolvedSearchParams.page : 1}
           isNext = {result.isNext}
         />
       </Suspense>

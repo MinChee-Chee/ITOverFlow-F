@@ -27,10 +27,11 @@ interface IQuestion {
 
 
 const Page = async ({ params, searchParams}: URLProps) => {
+  const resolvedSearchParams = await searchParams;
   const result = await getQuestionsByTagId({
     tagId: params.id,
-    searchQuery: searchParams.q,
-    page: searchParams.page ? +searchParams.page : 1,
+    searchQuery: resolvedSearchParams.q,
+    page: resolvedSearchParams.page ? +resolvedSearchParams.page : 1,
   });
   const iconClass = getDeviconClassName(result.tagTitle);
   
@@ -78,7 +79,7 @@ const Page = async ({ params, searchParams}: URLProps) => {
       </div>
       <div className="mt-9">
       <Pagination
-        pageNumber = {searchParams?.page ? +searchParams.page : 1}
+        pageNumber = {resolvedSearchParams?.page ? +resolvedSearchParams.page : 1}
         isNext = {result.isNext}
       />
       </div>
