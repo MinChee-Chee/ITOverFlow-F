@@ -9,6 +9,7 @@ import { HomePageFilters } from "@/constants/filters";
 import { getQuestions, getRecommendedQuestions } from "@/lib/actions/question.action";
 import { SearchParamsProps } from "@/types";
 import Link from "next/link";
+import { Suspense } from "react";
 
 import type { Metadata } from "next";
 import { auth } from "@clerk/nextjs/server";
@@ -17,6 +18,8 @@ export const metadata: Metadata = {
   title: "Home | Dev Overflow for HCMUTE future engineers",
   description: "Dev Overflow is a community of developers, engineers, and future engineers who are passionate about learning and sharing knowledge.",
 }
+
+export const dynamic = 'force-dynamic';
 
 export default async function Home({searchParams}: SearchParamsProps) {
 
@@ -59,22 +62,28 @@ export default async function Home({searchParams}: SearchParamsProps) {
       </div> 
 
       <div className="mt-11 flex justify-between gap-5 max-sm:flex-col sm:items-center">
-        <LocalSearchbar 
-          route="/"
-          iconPosition="left"
-          imgSrc="/assets/icons/search.svg"
-          placeholder="Search for questions"
-          otherClasses="flex-1"
-        />
+        <Suspense fallback={<div className="flex-1 h-[56px] animate-pulse bg-light-800 dark:bg-dark-300 rounded-[10px]" />}>
+          <LocalSearchbar 
+            route="/"
+            iconPosition="left"
+            imgSrc="/assets/icons/search.svg"
+            placeholder="Search for questions"
+            otherClasses="flex-1"
+          />
+        </Suspense>
 
-        <Filter
-          filters={HomePageFilters}
-          otherClasses="min-h-[56px] sm:min-w-[170px]"
-          containerClasses="hidden max-md:flex"
-        />
+        <Suspense fallback={<div className="min-h-[56px] sm:min-w-[170px] animate-pulse bg-light-800 dark:bg-dark-300 rounded-md" />}>
+          <Filter
+            filters={HomePageFilters}
+            otherClasses="min-h-[56px] sm:min-w-[170px]"
+            containerClasses="hidden max-md:flex"
+          />
+        </Suspense>
       </div>
 
-      <HomeFilters />
+      <Suspense fallback={<div className="mt-6 h-10 animate-pulse bg-light-800 dark:bg-dark-300 rounded-md" />}>
+        <HomeFilters />
+      </Suspense>
 
       <div className="mt-10 flex w-full flex-col gap-6">
         {result.questions.length > 0 ?
@@ -99,10 +108,12 @@ export default async function Home({searchParams}: SearchParamsProps) {
           />}
       </div>
       <div className="mt-9">
-      <Pagination
-        pageNumber = {searchParams?.page ? +searchParams.page : 1}
-        isNext = {result.isNext}
-      />
+      <Suspense fallback={<div className="h-10 animate-pulse bg-light-800 dark:bg-dark-300 rounded-md" />}>
+        <Pagination
+          pageNumber = {searchParams?.page ? +searchParams.page : 1}
+          isNext = {result.isNext}
+        />
+      </Suspense>
       </div>
     </>
   )

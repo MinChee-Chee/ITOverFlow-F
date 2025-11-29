@@ -8,6 +8,7 @@ import { QuestionFilters } from "@/constants/filters";
 import { getSavedQuestions } from "@/lib/actions/user.action";
 import { SearchParamsProps } from "@/types";
 import {auth} from "@clerk/nextjs/server";
+import { Suspense } from "react";
 
 import type { Metadata } from "next";
 
@@ -15,6 +16,8 @@ export const metadata: Metadata = {
   title: "Saved Questions | Dev Overflow for HCMUTE future engineers",
   description: "saved questions on Dev Overflow",
 }
+
+export const dynamic = 'force-dynamic';
 
 export default async function Collection({searchParams}: SearchParamsProps) {
     const{ userId } = await auth();
@@ -31,18 +34,22 @@ export default async function Collection({searchParams}: SearchParamsProps) {
         <h1 className="h1-bold text-dark100_light900">Saved Questions</h1> 
 
       <div className="mt-11 flex justify-between gap-5 max-sm:flex-col sm:items-center">
-        <LocalSearchbar 
-          route="/collection"
-          iconPosition="left"
-          imgSrc="/assets/icons/search.svg"
-          placeholder="Search for questions"
-          otherClasses="flex-1"
-        />
+        <Suspense fallback={<div className="flex-1 h-[56px] animate-pulse bg-light-800 dark:bg-dark-300 rounded-[10px]" />}>
+          <LocalSearchbar 
+            route="/collection"
+            iconPosition="left"
+            imgSrc="/assets/icons/search.svg"
+            placeholder="Search for questions"
+            otherClasses="flex-1"
+          />
+        </Suspense>
 
-        <Filter
-          filters={QuestionFilters}
-          otherClasses="min-h-[56px] sm:min-w-[170px]"
-        />
+        <Suspense fallback={<div className="min-h-[56px] sm:min-w-[170px] animate-pulse bg-light-800 dark:bg-dark-300 rounded-md" />}>
+          <Filter
+            filters={QuestionFilters}
+            otherClasses="min-h-[56px] sm:min-w-[170px]"
+          />
+        </Suspense>
       </div>
 
 
@@ -69,10 +76,12 @@ export default async function Collection({searchParams}: SearchParamsProps) {
           />}
       </div>
       <div className="mt-9">
-      <Pagination
-        pageNumber = {searchParams?.page ? +searchParams.page : 1}
-        isNext = {result.isNext}
-      />
+      <Suspense fallback={<div className="h-10 animate-pulse bg-light-800 dark:bg-dark-300 rounded-md" />}>
+        <Pagination
+          pageNumber = {searchParams?.page ? +searchParams.page : 1}
+          isNext = {result.isNext}
+        />
+      </Suspense>
       </div>
     </>
   )

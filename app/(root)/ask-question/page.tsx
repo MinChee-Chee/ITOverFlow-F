@@ -11,6 +11,8 @@ export const metadata: Metadata = {
   description: "Ask a question on DevOverFlow",
 }
 
+export const dynamic = 'force-dynamic';
+
 const Page = async () => {
   const { userId } = await auth();
 

@@ -6,6 +6,7 @@ import { UserFilters } from '@/constants/filters'
 import { getAllUsers } from '@/lib/actions/user.action'
 import { SearchParamsProps } from '@/types'
 import Link from 'next/link'
+import { Suspense } from 'react'
 
 import type { Metadata } from "next";
 
@@ -13,6 +14,8 @@ export const metadata: Metadata = {
   title: "Community | Meet amazing developers from HCMUTE",
   description: "Community of HCMUTE future engineers",
 }
+
+export const dynamic = 'force-dynamic';
 
 const Community = async ({searchParams}: SearchParamsProps) => {
     const result = await getAllUsers({
@@ -27,18 +30,22 @@ const Community = async ({searchParams}: SearchParamsProps) => {
         <h1 className="h1-bold text-dark100_light900">All Users</h1> 
 
       <div className="mt-11 flex justify-between gap-5 max-sm:flex-col sm:items-center">
-        <LocalSearchbar 
-          route="/community"
-          iconPosition="left"
-          imgSrc="/assets/icons/search.svg"
-          placeholder="Search for amazing users"
-          otherClasses="flex-1"
-        />
+        <Suspense fallback={<div className="flex-1 h-[56px] animate-pulse bg-light-800 dark:bg-dark-300 rounded-[10px]" />}>
+          <LocalSearchbar 
+            route="/community"
+            iconPosition="left"
+            imgSrc="/assets/icons/search.svg"
+            placeholder="Search for amazing users"
+            otherClasses="flex-1"
+          />
+        </Suspense>
 
-        <Filter
-          filters={UserFilters}
-          otherClasses="min-h-[56px] sm:min-w-[170px]"
-        />
+        <Suspense fallback={<div className="min-h-[56px] sm:min-w-[170px] animate-pulse bg-light-800 dark:bg-dark-300 rounded-md" />}>
+          <Filter
+            filters={UserFilters}
+            otherClasses="min-h-[56px] sm:min-w-[170px]"
+          />
+        </Suspense>
       </div>
       <section className="mt-12 flex flex-wrap gap-4">
         {result.users.length > 0 ? (
@@ -57,10 +64,12 @@ const Community = async ({searchParams}: SearchParamsProps) => {
         )}
       </section>
       <div className="mt-9">
-      <Pagination
-        pageNumber = {searchParams?.page ? +searchParams.page : 1}
-        isNext = {result.isNext}
-      />
+      <Suspense fallback={<div className="h-10 animate-pulse bg-light-800 dark:bg-dark-300 rounded-md" />}>
+        <Pagination
+          pageNumber = {searchParams?.page ? +searchParams.page : 1}
+          isNext = {result.isNext}
+        />
+      </Suspense>
       </div>
     </>
   )

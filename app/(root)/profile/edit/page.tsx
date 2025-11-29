@@ -4,6 +4,8 @@ import { ParamsProps } from '@/types';
 import { auth } from '@clerk/nextjs/server'
 import React from 'react'
 
+export const dynamic = 'force-dynamic';
+
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const Page = async ({params} : ParamsProps) => {
   const {userId} = await auth();

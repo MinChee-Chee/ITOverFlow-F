@@ -7,6 +7,7 @@ import { TagFilters } from '@/constants/filters'
 import { getAllTags } from '@/lib/actions/tag.actions'
 import { SearchParamsProps } from '@/types'
 import Link from 'next/link'
+import { Suspense } from 'react'
 
 import type { Metadata } from "next";
 
@@ -14,6 +15,8 @@ export const metadata: Metadata = {
   title: "Dev Overflow | Tags",
   description: "Tags on Dev Overflow",
 }
+
+export const dynamic = 'force-dynamic';
 
 const Tags = async ({searchParams}: SearchParamsProps) => {
     const result = await getAllTags({
@@ -28,18 +31,22 @@ const Tags = async ({searchParams}: SearchParamsProps) => {
         <h1 className="h1-bold text-dark100_light900">All Tags</h1> 
 
       <div className="mt-11 flex justify-between gap-5 max-sm:flex-col sm:items-center">
-        <LocalSearchbar 
-          route="/tags"
-          iconPosition="left"
-          imgSrc="/assets/icons/search.svg"
-          placeholder="Search for tags"
-          otherClasses="flex-1"
-        />
+        <Suspense fallback={<div className="flex-1 h-[56px] animate-pulse bg-light-800 dark:bg-dark-300 rounded-[10px]" />}>
+          <LocalSearchbar 
+            route="/tags"
+            iconPosition="left"
+            imgSrc="/assets/icons/search.svg"
+            placeholder="Search for tags"
+            otherClasses="flex-1"
+          />
+        </Suspense>
 
-        <Filter
-          filters={TagFilters}
-          otherClasses="min-h-[56px] sm:min-w-[170px]"
-        />
+        <Suspense fallback={<div className="min-h-[56px] sm:min-w-[170px] animate-pulse bg-light-800 dark:bg-dark-300 rounded-md" />}>
+          <Filter
+            filters={TagFilters}
+            otherClasses="min-h-[56px] sm:min-w-[170px]"
+          />
+        </Suspense>
       </div>
       <section className="mt-12 flex flex-wrap gap-4">
         {result.tags.length > 0 ? (
@@ -69,10 +76,12 @@ const Tags = async ({searchParams}: SearchParamsProps) => {
         )}
       </section>
       <div className="mt-9">
-      <Pagination
-        pageNumber = {searchParams?.page ? +searchParams.page : 1}
-        isNext = {result.isNext}
-      />
+      <Suspense fallback={<div className="h-10 animate-pulse bg-light-800 dark:bg-dark-300 rounded-md" />}>
+        <Pagination
+          pageNumber = {searchParams?.page ? +searchParams.page : 1}
+          isNext = {result.isNext}
+        />
+      </Suspense>
       </div>
     </>
   )
