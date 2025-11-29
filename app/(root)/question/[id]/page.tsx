@@ -14,8 +14,9 @@ import Link from "next/link";
 import React from "react";
 
 const Question = async ({params, searchParams}: any) => {
+  const resolvedParams = await params;
   const resolvedSearchParams = await searchParams;
-  const result = await getQuestionById({questionId: params.id});
+  const result = await getQuestionById({questionId: resolvedParams.id});
   const {userId: clerkId} = await auth();
 
   let mongoUser;

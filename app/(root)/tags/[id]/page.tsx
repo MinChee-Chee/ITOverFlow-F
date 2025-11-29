@@ -27,9 +27,10 @@ interface IQuestion {
 
 
 const Page = async ({ params, searchParams}: URLProps) => {
+  const resolvedParams = await params;
   const resolvedSearchParams = await searchParams;
   const result = await getQuestionsByTagId({
-    tagId: params.id,
+    tagId: resolvedParams.id,
     searchQuery: resolvedSearchParams.q,
     page: resolvedSearchParams.page ? +resolvedSearchParams.page : 1,
   });
@@ -44,7 +45,7 @@ const Page = async ({ params, searchParams}: URLProps) => {
 
       <div className="mt-11 w-full">
         <LocalSearchbar 
-          route={`/tags/${params.id}`}
+          route={`/tags/${resolvedParams.id}`}
           iconPosition="left"
           imgSrc="/assets/icons/search.svg"
           placeholder="Search tag questions"

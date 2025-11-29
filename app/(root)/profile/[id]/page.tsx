@@ -15,9 +15,10 @@ import Link from 'next/link'
 import React from 'react'
 
 const Profile = async ({ params, searchParams}: URLProps) => {
+  const resolvedParams = await params;
   const resolvedSearchParams = await searchParams;
   const { userId : clerkId} = await auth();
-  const userInfo = await getUserInfo({userId: params.id})
+  const userInfo = await getUserInfo({userId: resolvedParams.id})
   return (
     <>
     <div className='flex flex-col-reverse items-start justify-between sm:flex-row'>
