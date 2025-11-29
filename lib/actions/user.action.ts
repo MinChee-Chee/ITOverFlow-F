@@ -11,7 +11,7 @@ import Question from "@/database/question.model";
 import Tag from "@/database/tag.model";
 import Answer from "@/database/answer.model";
 import { BadgeCriteriaType } from "@/types";
-import { assignBadges } from "../utils";
+import { assignBadges, escapeRegex } from "../utils";
 
 export async function getUserById(params: any) {
   try {
@@ -101,9 +101,10 @@ export async function getAllUsers(params: GetAllUsersParams) {
     const query: FilterQuery<typeof User> = {};
 
     if(searchQuery) {
+      const escapedQuery = escapeRegex(searchQuery);
       query.$or = [
-        { name: { $regex: new RegExp(searchQuery, 'i') }},
-        { username: { $regex: new RegExp(searchQuery, 'i') }},
+        { name: { $regex: new RegExp(escapedQuery, 'i') }},
+        { username: { $regex: new RegExp(escapedQuery, 'i') }},
       ]
     }
 
@@ -184,7 +185,7 @@ export async function getSavedQuestions(params: GetSavedQuestionsParams) {
     const skipAmount = (page - 1) * pageSize;
     
     const query: FilterQuery<typeof Question> = searchQuery
-      ? { title: { $regex: new RegExp(searchQuery, 'i') } }
+      ? { title: { $regex: new RegExp(escapeRegex(searchQuery), 'i') } }
       : { };
 
       let sortOptions = {};

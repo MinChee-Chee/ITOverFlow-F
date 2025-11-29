@@ -10,6 +10,7 @@ import Answer from "@/database/answer.model";
 import Interaction from "@/database/interaction.model";
 import { FilterQuery } from "mongoose";
 import { notifyUserByClerkId } from "../push-notifications";
+import { escapeRegex } from "../utils";
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export async function getQuestions(params: GetQuestionsParams) {
@@ -23,9 +24,10 @@ export async function getQuestions(params: GetQuestionsParams) {
     const query: FilterQuery<typeof Question> = {};
 
     if(searchQuery) {
+      const escapedQuery = escapeRegex(searchQuery);
       query.$or = [
-        { title: { $regex: new RegExp(searchQuery, "i") }},
-        { content: { $regex: new RegExp(searchQuery, "i") }},
+        { title: { $regex: new RegExp(escapedQuery, "i") }},
+        { content: { $regex: new RegExp(escapedQuery, "i") }},
       ]
     }
 
@@ -80,8 +82,9 @@ export async function createQuestion(params: CreateQuestionParams) {
 
     // Create the tags or get them if they already exist
     for (const tag of tags) {
+      const escapedTag = escapeRegex(tag);
       const existingTag = await Tag.findOneAndUpdate(
-        { name: { $regex: new RegExp(`^${tag}$`, "i") } }, 
+        { name: { $regex: new RegExp(`^${escapedTag}$`, "i") } }, 
         { $setOnInsert: { name: tag }, $push: { questions: question._id } },
         { upsert: true, new: true }
       )
@@ -350,9 +353,10 @@ export async function getRecommendedQuestions(params: RecommendedParams) {
     };
 
     if (searchQuery) {
+      const escapedQuery = escapeRegex(searchQuery);
       query.$or = [
-        { title: { $regex: searchQuery, $options: "i" } },
-        { content: { $regex: searchQuery, $options: "i" } },
+        { title: { $regex: escapedQuery, $options: "i" } },
+        { content: { $regex: escapedQuery, $options: "i" } },
       ];
     }
 

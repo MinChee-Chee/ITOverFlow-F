@@ -8,6 +8,7 @@ import { FilterQuery, Types } from "mongoose";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import Tag, {ITag} from "@/database/tag.model";
 import Question from "@/database/question.model";
+import { escapeRegex } from "../utils";
 type TagCountEntry = {
   count: number;
   tag: ITag | null;
@@ -150,7 +151,7 @@ export async function getTopInteractedTags(params: GetTopInteractedTagsParams) {
         path: 'questions',
         model: Question,
         match: searchQuery
-          ? { title: { $regex: searchQuery, $options: 'i' }}
+          ? { title: { $regex: escapeRegex(searchQuery), $options: 'i' }}
           : {},
         options: {
           sort: { createdAt: -1 },

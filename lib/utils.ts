@@ -10,6 +10,11 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
+// Escape special regex characters in a string
+export function escapeRegex(str: string): string {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 export const getDeviconClassName = (techName: string) => {
   const normalizedTechName = techName.replace(/[ .]/g, "").toLowerCase();
 

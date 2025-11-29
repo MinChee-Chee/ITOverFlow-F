@@ -7,6 +7,7 @@ import { SearchParams } from "./shared.types";
 import Tag from "@/database/tag.model";
 import Answer from "@/database/answer.model";
 import User from "@/database/user.model";
+import { escapeRegex } from "../utils";
 
 const SearchableTypes = ["question", "user", "answer", "tag"];
 
@@ -15,7 +16,8 @@ export async function globalSearch(params: SearchParams) {
       await connectToDatabase();
   
       const { query, type } = params;
-      const regexQuery = { $regex: query, $options: "i" };
+      const escapedQuery = escapeRegex(query);
+      const regexQuery = { $regex: escapedQuery, $options: "i" };
   
       let results = [];
   
