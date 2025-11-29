@@ -17,7 +17,7 @@ export const metadata: Metadata = {
 }
 
 export default async function Collection({searchParams}: SearchParamsProps) {
-    const{ userId } = auth();
+    const{ userId } = await auth();
     if(!userId) return null;
   const result = await getSavedQuestions({
     clerkId: userId,

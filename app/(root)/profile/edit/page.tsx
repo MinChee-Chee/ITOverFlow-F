@@ -6,7 +6,7 @@ import React from 'react'
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const Page = async ({params} : ParamsProps) => {
-  const {userId} = auth();
+  const {userId} = await auth();
 
   if(!userId) return null;
 

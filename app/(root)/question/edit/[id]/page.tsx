@@ -6,7 +6,7 @@ import { auth } from '@clerk/nextjs/server'
 import React from 'react'
 
 const Page = async ({params} : ParamsProps) => {
-  const {userId} = auth();
+  const {userId} = await auth();
 
   if(!userId) return null;
 
