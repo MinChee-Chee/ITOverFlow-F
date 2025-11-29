@@ -1,9 +1,18 @@
-import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
+import { authMiddleware } from "@clerk/nextjs/server";
 
-const isProtectedRoute = createRouteMatcher(["/ask-question(.*)","/jobs"]);
-
-export default clerkMiddleware((auth, req) => {
-  if (isProtectedRoute(req)) auth().protect();
+export default authMiddleware({
+  // Routes that don't require authentication
+  publicRoutes: [
+    "/",
+    "/sign-in(.*)",
+    "/sign-up(.*)",
+    "/question(.*)",
+    "/tags(.*)",
+    "/profile(.*)",
+    "/community(.*)",
+    "/collection(.*)",
+  ],
+  // Routes that require authentication (ask-question and sandbox are protected by default)
 });
 
 export const config = {
