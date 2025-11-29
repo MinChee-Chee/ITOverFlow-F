@@ -15,7 +15,7 @@ import { assignBadges } from "../utils";
 
 export async function getUserById(params: any) {
   try {
-    connectToDatabase();
+    await connectToDatabase();
 
     const { userId } = params;
 
@@ -30,7 +30,7 @@ export async function getUserById(params: any) {
 
 export async function createUser(userData: CreateUserParams) {
   try {
-    connectToDatabase();
+    await connectToDatabase();
 
     const newUser = await User.create(userData);
 
@@ -43,7 +43,7 @@ export async function createUser(userData: CreateUserParams) {
 
 export async function updateUser(params: UpdateUserParams) {
   try {
-    connectToDatabase();
+    await connectToDatabase();
 
     const { clerkId, updateData, path } = params;
 
@@ -60,7 +60,7 @@ export async function updateUser(params: UpdateUserParams) {
 
 export async function deleteUser(params: DeleteUserParams) {
   try {
-    connectToDatabase();
+    await connectToDatabase();
 
     const { clerkId } = params;
 
@@ -92,7 +92,7 @@ export async function deleteUser(params: DeleteUserParams) {
 
 export async function getAllUsers(params: GetAllUsersParams) {
   try {
-    connectToDatabase();
+    await connectToDatabase();
 
     const { searchQuery, filter, page=1, pageSize=9 } = params;
     
@@ -142,7 +142,7 @@ export async function getAllUsers(params: GetAllUsersParams) {
 
 export async function toggleSaveQuestion(params: ToggleSaveQuestionParams) {
   try {
-    connectToDatabase();
+    await connectToDatabase();
 
     const { userId, questionId, path } = params;
 
@@ -177,7 +177,7 @@ export async function toggleSaveQuestion(params: ToggleSaveQuestionParams) {
 
 export async function getSavedQuestions(params: GetSavedQuestionsParams) {
   try {
-    connectToDatabase();
+    await connectToDatabase();
 
     const { clerkId, searchQuery, filter, page = 1, pageSize = 10 } = params;
 
@@ -226,12 +226,11 @@ export async function getSavedQuestions(params: GetSavedQuestionsParams) {
       ]
     })
 
-    const isNext = user.saved.length > pageSize;
-    
     if(!user) {
       throw new Error('User not found');
     }
 
+    const isNext = user.saved.length > pageSize;
     const savedQuestions = user.saved;
 
     return { questions: savedQuestions, isNext };
@@ -243,7 +242,7 @@ export async function getSavedQuestions(params: GetSavedQuestionsParams) {
 
 export async function getUserInfo(params: GetUserByIdParams) {
   try {
-    connectToDatabase();
+    await connectToDatabase();
 
     const { userId } = params;
 
@@ -289,9 +288,9 @@ export async function getUserInfo(params: GetUserByIdParams) {
     const criteria = [
       {type: 'QUESTION_COUNT' as BadgeCriteriaType, count: totalQuestions},
       {type: 'ANSWER_COUNT' as BadgeCriteriaType, count: totalAnswers},
-      {type: 'QUESTION_UPVOTES' as BadgeCriteriaType, count: questionUpvotes?. totalUpvotes || 0},
-      {type: 'ANSWER_UPVOTES' as BadgeCriteriaType, count: answerUpvotes?. totalUpvotes || 0},
-      {type: 'TOTAL_VIEWS' as BadgeCriteriaType, count: questionViews?. totalViews || 0},
+      {type: 'QUESTION_UPVOTES' as BadgeCriteriaType, count: questionUpvotes?.totalUpvotes || 0},
+      {type: 'ANSWER_UPVOTES' as BadgeCriteriaType, count: answerUpvotes?.totalUpvotes || 0},
+      {type: 'TOTAL_VIEWS' as BadgeCriteriaType, count: questionViews?.totalViews || 0},
     ]
 
     const badgeCounts = assignBadges({ criteria });
@@ -311,7 +310,7 @@ export async function getUserInfo(params: GetUserByIdParams) {
 
 export async function getUserQuestions(params: GetUserStatsParams) {
   try {
-    connectToDatabase();
+    await connectToDatabase();
 
     const { userId, page = 1, pageSize = 5 } = params;
 
@@ -337,7 +336,7 @@ export async function getUserQuestions(params: GetUserStatsParams) {
 
 export async function getUserAnswers(params: GetUserStatsParams) {
   try {
-    connectToDatabase();
+    await connectToDatabase();
 
     const { userId, page = 1, pageSize = 5 } = params;
     

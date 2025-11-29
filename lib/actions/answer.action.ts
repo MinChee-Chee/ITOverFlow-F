@@ -50,21 +50,23 @@ export async function createAnswer(params: CreateAnswerParams) {
     ) {
       const questionOwner = await User.findById(questionObject.author);
 
-      // Send notification non-blocking - don't let notification failures affect answer creation
-      notifyUserByClerkId({
-        clerkId: questionOwner?.clerkId,
-        title: `${answeringUser?.name ?? "Someone"} replied to your question`,
-        body: `A new answer was just posted on "${questionObject.title}".`,
-        path: `/question/${question}`,
-        data: {
-          type: "answer_created",
-          questionId: question.toString(),
-          answerId: newAnswer._id.toString(),
-        },
-      }).catch((error) => {
-        // Log notification errors but don't throw - notifications are non-critical
-        console.error("[Answer] Failed to send notification:", error);
-      });
+      if (questionOwner?.clerkId) {
+        // Send notification non-blocking - don't let notification failures affect answer creation
+        notifyUserByClerkId({
+          clerkId: questionOwner.clerkId,
+          title: `${answeringUser?.name ?? "Someone"} replied to your question`,
+          body: `A new answer was just posted on "${questionObject.title}".`,
+          path: `/question/${question}`,
+          data: {
+            type: "answer_created",
+            questionId: question.toString(),
+            answerId: newAnswer._id.toString(),
+          },
+        }).catch((error) => {
+          // Log notification errors but don't throw - notifications are non-critical
+          console.error("[Answer] Failed to send notification:", error);
+        });
+      }
     }
 
     revalidatePath(path)

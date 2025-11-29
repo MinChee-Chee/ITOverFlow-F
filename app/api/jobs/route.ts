@@ -10,10 +10,18 @@ export async function GET(request: Request) {
 
     const url = `https://jsearch.p.rapidapi.com/search?query=${encodeURIComponent(query)}&page=${page}&num_pages=${numPages}&date_posted=${datePosted}`;
     
+    const rapidApiKey = process.env.RAPIDAPI_KEY;
+    if (!rapidApiKey) {
+      return NextResponse.json(
+        { error: "RAPIDAPI_KEY environment variable is not set", jobs: [] },
+        { status: 500 }
+      );
+    }
+
     const options = {
       method: "GET",
       headers: {
-        "x-rapidapi-key": process.env.RAPIDAPI_KEY || "f9dd055560msh19f8a0462b834dep16e693jsn04e287ec0c64",
+        "x-rapidapi-key": rapidApiKey,
         "x-rapidapi-host": "jsearch.p.rapidapi.com",
       },
     };

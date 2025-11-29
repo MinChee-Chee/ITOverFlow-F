@@ -95,6 +95,11 @@ export const formUrlQuery = ({ params, key, value}: UrlQueryParams) => {
 
   currentUrl[key] = value;
 
+  // This function is intended for client-side use only
+  if (typeof window === 'undefined') {
+    throw new Error('formUrlQuery can only be used in client components');
+  }
+
   return qs.stringifyUrl({
     url: window.location.pathname,
     query: currentUrl,
@@ -113,6 +118,11 @@ export const removeKeysFromQuery = ({ params, keysToRemove}: RemoveUrlQueryParam
   keysToRemove.forEach((key) => {
     delete currentUrl[key];
   })
+
+  // This function is intended for client-side use only
+  if (typeof window === 'undefined') {
+    throw new Error('removeKeysFromQuery can only be used in client components');
+  }
 
   return qs.stringifyUrl({
     url: window.location.pathname,

@@ -3,14 +3,18 @@ import mongoose from 'mongoose';
 let isConnected: boolean = false;
 
 export const connectToDatabase = async () => {
-    mongoose.set('strictQuery',true);
+    // strictQuery is deprecated in Mongoose 7+, but kept for backward compatibility
+    // In Mongoose 8+, strict mode is the default
+    if (mongoose.version.startsWith('7.')) {
+        mongoose.set('strictQuery', true);
+    }
     
     if(!process.env.MONGODB_URL) {
-        return console.log('MISSING MONGODB_URL');
+        throw new Error('MISSING MONGODB_URL environment variable');
     }
 
     if(isConnected) {
-        return console.log('Already connected to the database');
+        return;
     }
 
     try {
@@ -21,6 +25,8 @@ export const connectToDatabase = async () => {
 
         console.log('Connected to the database');
     } catch (error) {
-        console.log('Error connecting to the database', error);
+        console.error('Error connecting to the database', error);
+        isConnected = false;
+        throw error;
     }
 }

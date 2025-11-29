@@ -248,6 +248,10 @@ export async function deleteQuestion(params: DeleteQuestionParams) {
 
     const question = await Question.findById(questionId);
 
+    if (!question) {
+      throw new Error("Question not found");
+    }
+
     const author = question.author;
 
     await Question.deleteOne({ _id: questionId });
@@ -260,6 +264,7 @@ export async function deleteQuestion(params: DeleteQuestionParams) {
     revalidatePath(path);
   } catch (error) {
     console.log(error);
+    throw error;
   }
 }
 
