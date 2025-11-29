@@ -99,10 +99,25 @@ const Answer = ({question, questionTitle, questionId, authorId}: Props) => {
       setIsSubmitting(true);
   
       try {
-        // Parse authorId and questionId consistently
-        const parsedAuthorId = typeof authorId === 'string' && authorId.startsWith('"')
-          ? JSON.parse(authorId)
-          : authorId;
+        // Parse authorId and questionId consistently - validate both start and end quotes
+        const parsedAuthorId = (() => {
+          if (typeof authorId === 'string') {
+            // Check if it's a JSON string (starts and ends with quotes)
+            if (authorId.startsWith('"') && authorId.endsWith('"')) {
+              try {
+                return JSON.parse(authorId);
+              } catch (error) {
+                console.error("[Answer] Failed to parse authorId JSON:", { authorId, error });
+                // Fallback: use the raw string if parsing fails
+                return authorId;
+              }
+            }
+            // If it's already a plain string, use it as is
+            return authorId;
+          }
+          // If it's not a string, return as is
+          return authorId;
+        })();
         
         await createAnswer({
           content: values.answer,

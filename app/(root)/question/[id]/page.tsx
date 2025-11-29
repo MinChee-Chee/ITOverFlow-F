@@ -47,7 +47,7 @@ const Question = async ({params, searchParams}: any) => {
               hasupVoted={mongoUser ? result.upvotes.includes(mongoUser._id) : false}
               downvotes={result.downvotes.length}
               hasdownVoted={mongoUser ? result.downvotes.includes(mongoUser._id) : false}
-              hasSaved={mongoUser?.saved.includes(result._id)}
+              hasSaved={mongoUser?.saved?.includes(result._id) ?? false}
             />
         </div>
     </div>
