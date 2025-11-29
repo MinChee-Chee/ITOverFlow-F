@@ -22,17 +22,17 @@ export const metadata: Metadata = {
 export const dynamic = 'force-dynamic';
 
 export default async function Home({searchParams}: SearchParamsProps) {
-
+  const resolvedSearchParams = await searchParams;
   const { userId } = await auth();
 
   let result;
 
-  if(searchParams?.filter === 'recommended') {
+  if(resolvedSearchParams?.filter === 'recommended') {
     if(userId) {
       result = await getRecommendedQuestions({
         userId,
-        searchQuery: searchParams.q,
-        page: searchParams.page ? +searchParams.page : 1,
+        searchQuery: resolvedSearchParams.q,
+        page: resolvedSearchParams.page ? +resolvedSearchParams.page : 1,
       }); 
     } else {
       result = {
@@ -42,9 +42,9 @@ export default async function Home({searchParams}: SearchParamsProps) {
     }
   } else {
     result = await getQuestions({
-      searchQuery: searchParams.q,
-      filter: searchParams.filter,
-      page: searchParams.page ? +searchParams.page : 1,
+      searchQuery: resolvedSearchParams.q,
+      filter: resolvedSearchParams.filter,
+      page: resolvedSearchParams.page ? +resolvedSearchParams.page : 1,
     }); 
   }
 
@@ -110,7 +110,7 @@ export default async function Home({searchParams}: SearchParamsProps) {
       <div className="mt-9">
       <Suspense fallback={<div className="h-10 animate-pulse bg-light-800 dark:bg-dark-300 rounded-md" />}>
         <Pagination
-          pageNumber = {searchParams?.page ? +searchParams.page : 1}
+          pageNumber = {resolvedSearchParams?.page ? +resolvedSearchParams.page : 1}
           isNext = {result.isNext}
         />
       </Suspense>
