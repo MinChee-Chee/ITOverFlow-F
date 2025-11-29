@@ -8,7 +8,7 @@ import SWRProvider from '@/components/providers/SWRProvider';
 import '../styles/prism.css'
 import 'devicon/devicon-base.css'
 import 'devicon/devicon.min.css'
-import { Analytics } from "@vercel/analytics/react"
+import { Analytics } from "@vercel/analytics/next"
 
 const inter = Inter({
   subsets: ['latin'],
