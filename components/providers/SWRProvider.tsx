@@ -12,9 +12,10 @@ export default function SWRProvider({ children }: SWRProviderProps) {
     <SWRConfig
       value={{
         fetcher,
-        revalidateOnFocus: true,
+        revalidateOnFocus: false, // Disabled to prevent excessive refreshes - enable per-query if needed
         revalidateOnReconnect: true,
-        dedupingInterval: 2000, // Dedupe requests within 2 seconds
+        dedupingInterval: 5000, // Increased to 5 seconds to reduce duplicate requests
+        revalidateIfStale: false, // Don't revalidate stale data automatically
       }}
     >
       {children}

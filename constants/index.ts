@@ -26,6 +26,11 @@ export const sidebarLinks: SidebarLink[] = [
       label: "Sandbox",
     },
     {
+      imgURL: "/assets/icons/currency-dollar-circle.svg",
+      route: "/pricing",
+      label: "Pricing",
+    },
+    {
       imgURL: "/assets/icons/tag.svg",
       route: "/tags",
       label: "Tags",

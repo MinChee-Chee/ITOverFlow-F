@@ -8,7 +8,7 @@ import { Button } from '../ui/button';
 import { SignedOut, useAuth } from '@clerk/nextjs';
 
 const LeftSidebar = () => {
-  const {userId} = useAuth();
+  const {userId, isLoaded} = useAuth();
   const pathname = usePathname();
   
   return (
@@ -17,14 +17,38 @@ const LeftSidebar = () => {
         {sidebarLinks.map((item) => {
           const isActive = (pathname.includes(item.route) && item.route.length > 1) || pathname === item.route;
 
+          // Profile link should only show when user is logged in
           if(item.route === '/profile') {
-            if(userId) {
-              item.route = `/profile/${userId}`
-            } else {
+            // Only show profile link if auth is loaded and user is authenticated
+            if(!isLoaded || !userId) {
               return null;
             }
+            // If user is logged in, compute the profile href
+            const href = `/profile/${userId}`;
+            
+            return (
+              <Link
+                href={href}
+                key={item.label}
+                className={`${
+                  isActive
+                    ? "primary-gradient rounded-lg text-light-900"
+                    : "text-dark300_light900"
+                }  flex items-center justify-start gap-4 bg-transparent p-4`}
+              >
+                <Image 
+                  src={item.imgURL}
+                  alt={item.label}
+                  width={20}
+                  height={20}
+                  className={`${isActive ? "" : "invert-colors"}`}
+                />
+                <p className={`${isActive ? 'base-bold' : 'base-medium'} max-lg:hidden`}>{item.label}</p>
+              </Link>
+            );
           }
 
+          // For all other links, render normally
           return (
               <Link
               href={item.route}

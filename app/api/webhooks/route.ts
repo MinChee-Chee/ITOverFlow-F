@@ -105,6 +105,61 @@ export async function POST(req: Request) {
       return NextResponse.json({ message: 'OK', user: deletedUser });
     }
 
+    // Billing webhook events
+    if (eventType === 'subscription.created') {
+      console.log('Processing subscription.created event:', evt.data);
+      // Handle subscription creation if needed
+      return NextResponse.json({ message: 'OK' });
+    }
+
+    if (eventType === 'subscription.updated') {
+      console.log('Processing subscription.updated event:', evt.data);
+      // Handle subscription updates if needed
+      return NextResponse.json({ message: 'OK' });
+    }
+
+    if (eventType === 'subscription.active') {
+      console.log('Processing subscription.active event:', evt.data);
+      // Handle subscription activation if needed
+      return NextResponse.json({ message: 'OK' });
+    }
+
+    if (eventType === 'subscription.pastDue') {
+      console.log('Processing subscription.pastDue event:', evt.data);
+      // Handle past due subscription if needed
+      return NextResponse.json({ message: 'OK' });
+    }
+
+    if (eventType === 'subscriptionItem.updated') {
+      console.log('Processing subscriptionItem.updated event:', evt.data);
+      // Handle subscription item updates if needed
+      return NextResponse.json({ message: 'OK' });
+    }
+
+    if (eventType === 'subscriptionItem.active') {
+      console.log('Processing subscriptionItem.active event:', evt.data);
+      // Handle subscription item activation if needed
+      return NextResponse.json({ message: 'OK' });
+    }
+
+    if (eventType === 'subscriptionItem.canceled') {
+      console.log('Processing subscriptionItem.canceled event:', evt.data);
+      // Handle subscription item cancellation if needed
+      return NextResponse.json({ message: 'OK' });
+    }
+
+    if (eventType === 'paymentAttempt.created') {
+      console.log('Processing paymentAttempt.created event:', evt.data);
+      // Handle payment attempt creation if needed
+      return NextResponse.json({ message: 'OK' });
+    }
+
+    if (eventType === 'paymentAttempt.updated') {
+      console.log('Processing paymentAttempt.updated event:', evt.data);
+      // Handle payment attempt updates if needed
+      return NextResponse.json({ message: 'OK' });
+    }
+
     console.log('Unsupported event type:', eventType);
     return NextResponse.json({ message: 'Event type not supported' });
   } catch (err) {

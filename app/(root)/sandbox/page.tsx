@@ -7,6 +7,8 @@ import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Play, RotateCcw, Trash2, Loader2 } from 'lucide-react'
 import { SUPPORTED_LANGUAGES, getLanguageById } from '@/constants/languages'
+import { Protect } from '@clerk/nextjs'
+import Link from 'next/link'
 
 // Default template code for HTML/CSS/JS
 const DEFAULT_HTML = `<div class="container">
@@ -227,14 +229,30 @@ const SandboxPage = () => {
   }
 
   return (
-    <div className="w-full">
-      <div className="mb-6">
-        <h1 className="h1-bold text-dark100_light900 mb-2">Code Sandbox</h1>
-        <p className="text-dark500_light700 body-regular">
-          Write and test code in multiple programming languages. Browser-native languages (HTML/CSS/JS) run in a secure iframe, 
-          while other languages execute via Judge0 API service for secure, sandboxed execution.
-        </p>
-      </div>
+    <Protect
+      plan="sandbox"
+      fallback={
+        <div className="w-full max-w-4xl mx-auto px-4 py-16 text-center">
+          <h1 className="h1-bold text-dark100_light900 mb-4">Code Sandbox - Premium Feature</h1>
+          <p className="body-regular text-dark500_light700 mb-8">
+            The Code Sandbox is available to subscribers. Subscribe to a plan to access this feature.
+          </p>
+          <Link href="/pricing">
+            <Button className="bg-primary-500 hover:bg-primary-400">
+              View Pricing Plans
+            </Button>
+          </Link>
+        </div>
+      }
+    >
+      <div className="w-full">
+        <div className="mb-6">
+          <h1 className="h1-bold text-dark100_light900 mb-2">Code Sandbox</h1>
+          <p className="text-dark500_light700 body-regular">
+            Write and test code in multiple programming languages. Browser-native languages (HTML/CSS/JS) run in a secure iframe, 
+            while other languages execute via Judge0 API service for secure, sandboxed execution.
+          </p>
+        </div>
 
       <div className="mb-4 flex flex-wrap gap-2 items-center">
         <div className="flex-1 min-w-[200px]">
@@ -336,7 +354,8 @@ const SandboxPage = () => {
           <li>Judge0 provides secure, sandboxed execution with time and memory limits</li>
         </ul>
       </div>
-    </div>
+      </div>
+    </Protect>
   )
 }
 
