@@ -105,6 +105,7 @@ export async function getAllUsers(params: GetAllUsersParams) {
       query.$or = [
         { name: { $regex: new RegExp(escapedQuery, 'i') }},
         { username: { $regex: new RegExp(escapedQuery, 'i') }},
+        { email: { $regex: new RegExp(escapedQuery, 'i') }},
       ]
     }
 

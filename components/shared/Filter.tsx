@@ -8,8 +8,8 @@ import {
     SelectTrigger,
     SelectValue,
   } from "@/components/ui/select"
-import { formUrlQuery } from "@/lib/utils";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams, usePathname } from "next/navigation";
+import { useCallback, memo, useRef, useEffect } from "react";
 
   
 
@@ -22,26 +22,39 @@ interface Props {
     containerClasses?: string;
     }
 
-const Filter = ({filters, otherClasses, containerClasses}:(Props)) => {
+const Filter = memo(({filters, otherClasses, containerClasses}:(Props)) => {
     const searchParams = useSearchParams();
     const router = useRouter();
+    const pathname = usePathname();
+    const searchParamsRef = useRef(searchParams);
+    const pathnameRef = useRef(pathname);
+
+    // Update refs when they change (but don't trigger re-renders)
+    useEffect(() => {
+        searchParamsRef.current = searchParams;
+        pathnameRef.current = pathname;
+    });
 
     const paramFilter = searchParams.get('filter');
 
-    const handleUpdateParams = (value: string) => {
-        const newUrl = formUrlQuery({
-            params: searchParams.toString(),
-            key: 'filter',
-            value
-        })
-        router.push(newUrl, {scroll: false})
-    }
+    const handleUpdateParams = useCallback((value: string) => {
+        // Only update if value actually changed
+        if (value === paramFilter) {
+            return
+        }
+        
+        // Create new params and reset page to 1 when filter changes
+        const params = new URLSearchParams(searchParamsRef.current.toString())
+        params.set('filter', value)
+        params.set('page', '1')
+        router.push(`${pathnameRef.current}?${params.toString()}`, {scroll: false})
+    }, [paramFilter, router]) // Removed searchParams and pathname from dependencies
 
   return (
     <div className={`relative ${containerClasses}`}>
         <Select
             onValueChange={ handleUpdateParams}
-            defaultValue={paramFilter || undefined}
+            value={paramFilter || undefined}
         >
             <SelectTrigger className={`${otherClasses} body-regular light-border background-light800_dark300 text-dark500_light700 border px-5 py-2.5`}>            
                 <div className="line-clamp-1 flex-1 text-left">
@@ -64,6 +77,8 @@ const Filter = ({filters, otherClasses, containerClasses}:(Props)) => {
 
     </div>
   )
-}
+})
+
+Filter.displayName = 'Filter'
 
 export default Filter

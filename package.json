@@ -59,6 +59,7 @@
     "@types/react-dom": "^19",
     "@types/sizzle": "^2.3.9",
     "@types/tinymce": "^4.6.9",
+    "baseline-browser-mapping": "^2.8.32",
     "eslint": "^8",
     "eslint-config-next": "^16.0.0",
     "postcss": "^8",

@@ -230,7 +230,7 @@ const SandboxPage = () => {
 
   return (
     <Protect
-      plan="sandbox"
+      plan="groupchat"
       fallback={
         <div className="w-full max-w-4xl mx-auto px-4 py-16 text-center">
           <h1 className="h1-bold text-dark100_light900 mb-4">Code Sandbox - Premium Feature</h1>
