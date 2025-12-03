@@ -27,6 +27,7 @@ interface ChatGroup {
   _id: string;
   name: string;
   description?: string;
+  lastMessageSnippet?: string;
   tags: Tag[];
   moderator: User;
   members: User[];
@@ -121,6 +122,38 @@ export default function ChatGroupList({ selectedGroupId, onGroupSelect }: ChatGr
     return group.members.some(member => member.clerkId === user.id);
   };
 
+  const markGroupAsRead = async (groupId: string) => {
+    try {
+      await fetch('/api/chat/groups/read', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ chatGroupId: groupId }),
+      });
+    } catch (error) {
+      console.error('Error marking chat group as read from list:', error);
+    }
+  };
+
+  const handleSelectGroup = (groupId: string) => {
+    // Optimistically clear unread badge for this group in the local list
+    setChatGroups((prev) =>
+      prev.map((g) =>
+        g._id === groupId
+          ? { ...g, hasUnread: false }
+          : g,
+      ),
+    );
+
+    // Persist read state on the server so that a page refresh also hides the badge
+    markGroupAsRead(groupId);
+
+    if (onGroupSelect) {
+      onGroupSelect(groupId);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center p-8">
@@ -158,7 +191,7 @@ export default function ChatGroupList({ selectedGroupId, onGroupSelect }: ChatGr
                       ? 'bg-primary/10 border-primary'
                       : 'hover:bg-muted'
                   }`}
-                  onClick={() => onGroupSelect && onGroupSelect(group._id)}
+                  onClick={() => handleSelectGroup(group._id)}
                 >
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1 space-y-2">
@@ -175,7 +208,11 @@ export default function ChatGroupList({ selectedGroupId, onGroupSelect }: ChatGr
                           </Badge>
                         )}
                       </div>
-                      {group.description && (
+                      {(group.hasUnread && group.lastMessageSnippet) ? (
+                        <p className="text-sm text-muted-foreground line-clamp-2">
+                          {group.lastMessageSnippet}
+                        </p>
+                      ) : group.description && (
                         <p className="text-sm text-muted-foreground line-clamp-2">
                           {group.description}
                         </p>

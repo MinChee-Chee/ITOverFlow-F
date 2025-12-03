@@ -8,7 +8,10 @@ import PushNotificationsInitializer from '@/components/providers/PushNotificatio
 
 const Layout = ({ children }: { children: React.ReactNode }) => {
   return (
-    <main className="background-light850_dark100 relative">
+    <main
+      className="background-light850_dark100 relative"
+      suppressHydrationWarning
+    >
       <Script
         src="https://js.pusher.com/beams/2.1.0/push-notifications-cdn.js"
         strategy="afterInteractive"

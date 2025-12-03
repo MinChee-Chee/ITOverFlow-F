@@ -167,33 +167,65 @@ export async function getChatGroups(params: GetChatGroupsParams) {
       .limit(pageSize)
       .lean();
 
-    // Attach unread info for the current user, if available
+    // Attach unread info and latest message snippet for the current user, if available
     let chatGroupsWithUnread = chatGroups;
 
     if (currentUserId && chatGroups.length > 0) {
       const groupIds = chatGroups.map((g: any) => g._id);
 
-      const readStates = await ChatGroupRead.find({
-        user: currentUserId,
-        chatGroup: { $in: groupIds },
-      })
-        .select('chatGroup lastReadAt')
-        .lean();
+      const [readStates, latestMessages] = await Promise.all([
+        ChatGroupRead.find({
+          user: currentUserId,
+          chatGroup: { $in: groupIds },
+        })
+          .select('chatGroup lastReadAt')
+          .lean(),
+        // Get the latest message per group
+        ChatMessage.aggregate([
+          { $match: { chatGroup: { $in: groupIds } } },
+          { $sort: { createdAt: -1 } },
+          {
+            $group: {
+              _id: '$chatGroup',
+              content: { $first: '$content' },
+              createdAt: { $first: '$createdAt' },
+            },
+          },
+        ]),
+      ]);
 
       const readMap = new Map(
         readStates.map((r: any) => [String(r.chatGroup), r.lastReadAt]),
+      );
+
+      const latestMap = new Map(
+        latestMessages.map((m: any) => [
+          String(m._id),
+          { content: m.content, createdAt: m.createdAt as Date },
+        ]),
       );
 
       chatGroupsWithUnread = chatGroups.map((group: any) => {
         const lastReadAt = readMap.get(String(group._id)) as Date | undefined;
         const updatedAt = group.updatedAt ? new Date(group.updatedAt) : null;
 
+        const latest = latestMap.get(String(group._id)) as
+          | { content: string; createdAt: Date }
+          | undefined;
+
         const hasUnread =
           !!updatedAt && (!lastReadAt || updatedAt > lastReadAt);
+
+        // If there is a latest message after lastReadAt, use it as the snippet
+        const hasUnreadMessage =
+          latest && (!lastReadAt || latest.createdAt > lastReadAt);
+
+        const lastMessageSnippet = latest?.content ?? undefined;
 
         return {
           ...group,
           hasUnread,
+          lastMessageSnippet: hasUnreadMessage ? lastMessageSnippet : undefined,
         };
       });
     }
