@@ -9,6 +9,8 @@
 # testing
 /coverage
 
+/nginx-logs
+
 # next.js
 /.next/
 /out/
