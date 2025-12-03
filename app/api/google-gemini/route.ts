@@ -2,7 +2,6 @@
 import { NextResponse } from "next/server";
 import { GoogleGenAI } from "@google/genai";
 
-// Helper function to strip HTML tags and clean text
 function stripHtml(html: string): string {
   return html
     .replace(/<[^>]*>/g, '') // Remove HTML tags
@@ -23,15 +22,12 @@ export const POST = async (request: Request) => {
         throw new Error('Question title and content are required');
       }
   
-      // Clean the question content
       const cleanQuestionContent = stripHtml(questionContent);
   
-      // Build the summary prompt
       let prompt = `Please provide a comprehensive summary of the following question and its discussion:\n\n`;
       prompt += `**Question Title:** ${questionTitle}\n\n`;
       prompt += `**Question Content:**\n${cleanQuestionContent}\n\n`;
   
-      // Add answers if they exist
       if (answers && answers.length > 0) {
         prompt += `**Answers (${answers.length} total):**\n\n`;
         answers.forEach((answer: any, index: number) => {
@@ -50,17 +46,12 @@ export const POST = async (request: Request) => {
       prompt += `4. Keeps the summary clear and easy to understand\n\n`;
       prompt += `Summary:`;
   
-      // Use Google Gemini API key from environment or fallback to provided key
-      // The SDK can read from GEMINI_API_KEY env var automatically, or we can pass it
       const geminiApiKey = process.env.GOOGLE_GEMINI_API_KEY || process.env.GEMINI_API_KEY;
       
-      // Initialize Google GenAI client
-      // SDK reads from GEMINI_API_KEY env var by default, or we can pass apiKey
       const ai = new GoogleGenAI({
         apiKey: geminiApiKey,
       });
 
-      // Try different models in order of preference
       const modelsToTry = [
         'gemini-2.5-flash',
         'gemini-2.5-pro-exp',
@@ -72,7 +63,6 @@ export const POST = async (request: Request) => {
       let lastError: any = null;
       let summary: string | null = null;
 
-      // Try each model until one works
       for (const model of modelsToTry) {
         try {
           console.log(`Trying model: ${model}`);
@@ -92,7 +82,6 @@ export const POST = async (request: Request) => {
           const errorMessage = err.message || err.toString();
           console.log(`Model ${model} failed:`, errorMessage);
           
-          // If it's a quota error, provide helpful message and stop trying
           if (errorMessage.includes('quota') || errorMessage.includes('Quota exceeded') || errorMessage.includes('RESOURCE_EXHAUSTED')) {
             const quotaMessage = 'Google Gemini API quota exceeded. Please check your quota limits at https://ai.dev/usage?tab=rate-limit. The free tier has limited requests per day.';
             throw new Error(quotaMessage);
@@ -101,7 +90,6 @@ export const POST = async (request: Request) => {
         }
       }
 
-      // If all models failed, throw the last error
       if (!summary) {
         if (lastError) {
           const errorMessage = lastError.message || 'All model configurations failed';
@@ -110,7 +98,6 @@ export const POST = async (request: Request) => {
         throw new Error('Failed to connect to Google Gemini API. Please check your API key.');
       }
 
-      // Summary is already extracted from the SDK response
       if (!summary) {
         throw new Error('No summary generated from AI');
       }
@@ -124,7 +111,6 @@ export const POST = async (request: Request) => {
     } catch (error: any) {
       console.error('Google Gemini API Error:', error);
       
-      // Provide user-friendly error messages
       let errorMessage = error.message || 'Failed to generate summary';
       
       if (errorMessage.includes('quota') || errorMessage.includes('Quota exceeded')) {

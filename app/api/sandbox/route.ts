@@ -1,4 +1,12 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
+import { validateAndSanitizeBody } from '@/lib/middleware/validation'
+import { z } from 'zod'
+
+const executeRequestSchema = z.object({
+  languageId: z.number().int().min(1).max(100),
+  code: z.string().min(1).max(100000, 'Code must be less than 100KB'),
+  stdin: z.string().max(10000, 'Input must be less than 10KB').optional(),
+})
 
 interface ExecuteRequest {
   languageId: number
@@ -46,17 +54,21 @@ const getStatusDescription = (statusId: number): string => {
   return statusMap[statusId] || 'Unknown Status'
 }
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
-    const body: ExecuteRequest = await request.json()
-    const { languageId, code, stdin = '' } = body
+    // Set timeout for the request (60 seconds for code execution)
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 60000);
 
-    if (!languageId || !code) {
-      return NextResponse.json(
-        { error: 'Language ID and code are required' },
-        { status: 400 }
-      )
-    }
+    try {
+      // Validate and sanitize request body
+      const validation = await validateAndSanitizeBody(request, executeRequestSchema);
+      if (validation instanceof NextResponse) {
+        clearTimeout(timeoutId);
+        return validation;
+      }
+
+      const { languageId, code, stdin = '' } = validation.data;
 
     // Get RapidAPI key from environment
     const rapidApiKey = process.env.RAPIDAPI_KEY
@@ -97,13 +109,28 @@ export async function POST(request: Request) {
       throw new Error('Failed to get submission token')
     }
 
-    // Step 2: Poll for results (with timeout)
-    const maxAttempts = 30
-    const pollInterval = 1000 // 1 second
-    let attempts = 0
+      // Step 2: Poll for results (with timeout)
+      const maxAttempts = 30
+      const pollInterval = 1000 // 1 second
+      let attempts = 0
 
-    while (attempts < maxAttempts) {
-      await new Promise((resolve) => setTimeout(resolve, pollInterval))
+      while (attempts < maxAttempts) {
+        // Check if request was aborted
+        if (controller.signal.aborted) {
+          clearTimeout(timeoutId);
+          return NextResponse.json(
+            {
+              success: false,
+              error: 'Request timeout',
+              output: '',
+            },
+            {
+              status: 408,
+            }
+          );
+        }
+
+        await new Promise((resolve) => setTimeout(resolve, pollInterval))
 
       const statusResponse = await fetch(
         `${JUDGE0_API_URL}/submissions/${token}`,
@@ -145,6 +172,7 @@ export async function POST(request: Request) {
           }
         }
 
+        clearTimeout(timeoutId);
         return NextResponse.json(
           {
             success: isSuccess,
@@ -167,6 +195,7 @@ export async function POST(request: Request) {
       attempts++
     }
 
+    clearTimeout(timeoutId);
     // Timeout
     return NextResponse.json(
       {
@@ -181,6 +210,22 @@ export async function POST(request: Request) {
         },
       }
     )
+    } catch (error) {
+      clearTimeout(timeoutId);
+      if (error instanceof Error && error.name === 'AbortError') {
+        return NextResponse.json(
+          {
+            success: false,
+            error: 'Request timeout',
+            output: '',
+          },
+          {
+            status: 408,
+          }
+        );
+      }
+      throw error;
+    }
   } catch (error: unknown) {
     console.error('Error executing code:', error)
     const message = error instanceof Error ? error.message : 'Failed to execute code'

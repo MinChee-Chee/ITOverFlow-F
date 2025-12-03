@@ -4,7 +4,6 @@ import Link from 'next/link'
 import React, { Suspense } from 'react'
 import Theme from './Theme'
 import MobileNav from './MobileNav'
-import GlobalSearch from '../search/GlobalSearch'
 
 const Navbar = () => {
   return (
@@ -25,9 +24,6 @@ const Navbar = () => {
             className='text-primary-500'>OverFlow</span></p>
         </Link>
 
-        <Suspense fallback={<div className="flex-1 max-w-[600px] h-[40px] animate-pulse bg-light-800 dark:bg-dark-300 rounded-md" />}>
-          <GlobalSearch/>
-        </Suspense>
 
         <div className='flex-between gap-5'>
             <Theme/>
