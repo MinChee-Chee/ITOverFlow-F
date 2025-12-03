@@ -171,6 +171,7 @@ export interface GetChatGroupsParams {
   searchQuery?: string;
   page?: number;
   pageSize?: number;
+  currentUserId?: string;
 }
 
 export interface JoinChatGroupParams {

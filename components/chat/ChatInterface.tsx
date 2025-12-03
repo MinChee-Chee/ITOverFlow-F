@@ -91,6 +91,11 @@ export default function ChatInterface({ chatGroupId }: ChatInterfaceProps) {
             new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
           );
         });
+
+        // When this chat is open and receives a new message, mark it as read
+        if (document.visibilityState === 'visible') {
+          markGroupAsRead();
+        }
       });
 
       pusherRef.current = pusher;
@@ -117,6 +122,9 @@ export default function ChatInterface({ chatGroupId }: ChatInterfaceProps) {
         new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
       );
       setMessages(uniqueMessages);
+
+      // After loading messages for an open group, mark as read
+      await markGroupAsRead();
     } catch (error) {
       console.error('Error loading messages:', error);
       toast({
@@ -126,6 +134,20 @@ export default function ChatInterface({ chatGroupId }: ChatInterfaceProps) {
       });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const markGroupAsRead = async () => {
+    try {
+      await fetch('/api/chat/groups/read', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ chatGroupId }),
+      });
+    } catch (error) {
+      console.error('Error marking chat group as read:', error);
     }
   };
 

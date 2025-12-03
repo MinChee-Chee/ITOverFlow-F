@@ -3,6 +3,7 @@
 import { connectToDatabase } from "../mongoose";
 import ChatGroup from "@/database/chatGroup.model";
 import ChatMessage from "@/database/chatMessage.model";
+import ChatGroupRead from "@/database/chatGroupRead.model";
 import User from "@/database/user.model";
 import Tag from "@/database/tag.model";
 import { 
@@ -140,7 +141,7 @@ export async function getChatGroups(params: GetChatGroupsParams) {
   try {
     await connectToDatabase();
 
-    const { tagId, searchQuery, page = 1, pageSize = 10 } = params;
+    const { tagId, searchQuery, page = 1, pageSize = 10, currentUserId } = params;
     const skipAmount = (page - 1) * pageSize;
 
     const query: FilterQuery<typeof ChatGroup> = {};
@@ -166,10 +167,41 @@ export async function getChatGroups(params: GetChatGroupsParams) {
       .limit(pageSize)
       .lean();
 
+    // Attach unread info for the current user, if available
+    let chatGroupsWithUnread = chatGroups;
+
+    if (currentUserId && chatGroups.length > 0) {
+      const groupIds = chatGroups.map((g: any) => g._id);
+
+      const readStates = await ChatGroupRead.find({
+        user: currentUserId,
+        chatGroup: { $in: groupIds },
+      })
+        .select('chatGroup lastReadAt')
+        .lean();
+
+      const readMap = new Map(
+        readStates.map((r: any) => [String(r.chatGroup), r.lastReadAt]),
+      );
+
+      chatGroupsWithUnread = chatGroups.map((group: any) => {
+        const lastReadAt = readMap.get(String(group._id)) as Date | undefined;
+        const updatedAt = group.updatedAt ? new Date(group.updatedAt) : null;
+
+        const hasUnread =
+          !!updatedAt && (!lastReadAt || updatedAt > lastReadAt);
+
+        return {
+          ...group,
+          hasUnread,
+        };
+      });
+    }
+
     const totalGroups = await ChatGroup.countDocuments(query);
     const isNext = totalGroups > skipAmount + chatGroups.length;
 
-    return { chatGroups: toPlainObject(chatGroups), isNext };
+    return { chatGroups: toPlainObject(chatGroupsWithUnread), isNext };
   } catch (error) {
     console.error('Error getting chat groups:', error);
     throw error;
@@ -253,7 +285,9 @@ export async function sendMessage(params: SendMessageParams) {
     const { content, authorId, chatGroupId, path } = params;
 
     // Verify chat group exists and user is a member in parallel
-    const chatGroup = await ChatGroup.findById(chatGroupId).select('members').lean() as any;
+    const chatGroup = await ChatGroup.findById(chatGroupId)
+      .select('members')
+      .lean() as any;
     if (!chatGroup) {
       throw new Error('Chat group not found');
     }

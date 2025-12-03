@@ -32,6 +32,7 @@ interface ChatGroup {
   members: User[];
   createdAt: string;
   updatedAt: string;
+  hasUnread?: boolean;
 }
 
 interface ChatGroupListProps {
@@ -166,6 +167,11 @@ export default function ChatGroupList({ selectedGroupId, onGroupSelect }: ChatGr
                         {userIsMember && (
                           <Badge variant="secondary" className="text-xs">
                             Member
+                          </Badge>
+                        )}
+                        {userIsMember && group.hasUnread && (
+                          <Badge variant="destructive" className="text-xs">
+                            New
                           </Badge>
                         )}
                       </div>

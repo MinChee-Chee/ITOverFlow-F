@@ -68,17 +68,34 @@ export async function POST(req: NextRequest) {
 
 export async function GET(req: NextRequest) {
   try {
+    const { userId } = await auth();
+
     const { searchParams } = new URL(req.url);
     const tagId = searchParams.get('tagId') || undefined;
     const searchQuery = searchParams.get('searchQuery') || undefined;
     const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
     const pageSize = Math.min(50, Math.max(1, parseInt(searchParams.get('pageSize') || '10', 10)));
 
+    let currentUserId: string | undefined;
+
+    if (userId) {
+      try {
+        const { getUserById } = await import('@/lib/actions/user.action');
+        const user = await getUserById({ userId });
+        if (user?._id) {
+          currentUserId = String(user._id);
+        }
+      } catch (error) {
+        console.error('Error resolving current user for chat groups:', error);
+      }
+    }
+
     const result = await getChatGroups({
       tagId,
       searchQuery,
       page,
       pageSize,
+      currentUserId,
     });
 
     return NextResponse.json(result);
