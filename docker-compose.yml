@@ -1,0 +1,96 @@
+services:
+  # Load balancer (Nginx)
+  nginx:
+    image: nginx:alpine
+    container_name: itoverflow-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      # Mount our config as an additional server config inside the default http {} block
+      - ./nginx.conf:/etc/nginx/conf.d/app.conf:ro
+      - ./nginx-cache:/var/cache/nginx
+      - ./nginx-logs:/var/log/nginx
+    depends_on:
+      - nextjs1
+      - nextjs2
+      - nextjs3
+    restart: unless-stopped
+    networks:
+      - itoverflow-network
+
+  # Next.js application instances
+  nextjs1:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: itoverflow-nextjs-1
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - MONGODB_URL=${MONGODB_URL}
+      - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL}
+      # Add other environment variables as needed
+    ports:
+      - "3000:3000"
+    restart: unless-stopped
+    networks:
+      - itoverflow-network
+
+  nextjs2:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: itoverflow-nextjs-2
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+      - MONGODB_URL=${MONGODB_URL}
+      - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL}
+    ports:
+      - "3001:3001"
+    restart: unless-stopped
+    networks:
+      - itoverflow-network
+
+  nextjs3:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: itoverflow-nextjs-3
+    environment:
+      - NODE_ENV=production
+      - PORT=3002
+      - MONGODB_URL=${MONGODB_URL}
+      - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL}
+    ports:
+      - "3002:3002"
+    restart: unless-stopped
+    networks:
+      - itoverflow-network
+
+  # Optional: Redis for distributed caching and rate limiting
+  redis:
+    image: redis:7-alpine
+    container_name: itoverflow-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    restart: unless-stopped
+    networks:
+      - itoverflow-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+networks:
+  itoverflow-network:
+    driver: bridge
+
+volumes:
+  redis-data:
+

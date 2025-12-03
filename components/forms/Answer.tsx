@@ -187,7 +187,6 @@ const Answer = ({question, questionTitle, questionId, authorId}: Props) => {
       try {
         const answers = answersData.answers || [];
     
-        // Call Google Gemini API for summary
         const response = await fetch('/api/google-gemini', {
           method: 'POST',
           headers: {

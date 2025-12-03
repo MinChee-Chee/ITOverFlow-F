@@ -21,7 +21,7 @@ const Navbar = () => {
 
             <p
             className='h2-bold font-spaceGrotesk text-dark-100 
-            dark:text-light-900 max-sm:hidden'>Dev<span
+            dark:text-light-900 max-sm:hidden'>IT<span
             className='text-primary-500'>OverFlow</span></p>
         </Link>
 

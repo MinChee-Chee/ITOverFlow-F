@@ -215,7 +215,7 @@ const Question = ({type, mongoUserId, questionDetails }: Props) => {
                 </span>
               </FormLabel>
               <FormControl className="mt-3.5">
-                <>
+                <div>
                   <Input
                   disabled={type === 'Edit'}
                     className="no-focus paragraph-regular background-light900_dark300 light-border-2 text-dark300_light700 min-h-[56px] border"
@@ -238,7 +238,7 @@ const Question = ({type, mongoUserId, questionDetails }: Props) => {
                       ))}
                     </div>
                   )}
-                </>
+                </div>
               </FormControl>
               <FormDescription className="body-regular mt-2.5 text-light-500">
                 Add up to 4 tags to describe what your question is about. You

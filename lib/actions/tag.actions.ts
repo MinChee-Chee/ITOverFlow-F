@@ -65,15 +65,15 @@ export async function getTopInteractedTags(params: GetTopInteractedTagsParams) {
       // Fetch full tag details
       const tags = await Tag.find({
         _id: { $in: sortedTagIds.map(id => new Types.ObjectId(id)) }
-      }).select('_id name').limit(limit);
+      }).select('_id name').limit(limit).lean();
 
       // Return in the same order as sorted by frequency
-      const tagMap = new Map(tags.map(tag => [tag._id.toString(), tag]));
+      const tagMap = new Map(tags.map(tag => [String(tag._id), tag]));
       return sortedTagIds
         .map(tagId => tagMap.get(tagId))
         .filter(Boolean)
         .map(tag => ({
-          _id: tag!._id.toString(),
+          _id: String(tag!._id),
           name: tag!.name
         }));
     } catch (error) {
@@ -122,11 +122,22 @@ export async function getTopInteractedTags(params: GetTopInteractedTagsParams) {
       const tags = await Tag.find(query)
         .sort(sortOptions)
         .skip(skipAmount)
-        .limit(pageSize);
+        .limit(pageSize)
+        .lean();
   
         const isNext = totalTags > skipAmount + tags.length;
   
-      return { tags, isNext }
+      // Convert ObjectIds to strings
+      const plainTags = tags.map((tag: any) => ({
+        _id: tag._id.toString(),
+        name: tag.name,
+        description: tag.description,
+        questions: Array.isArray(tag.questions) ? tag.questions.map((q: any) => q.toString()) : tag.questions,
+        followers: Array.isArray(tag.followers) ? tag.followers.map((f: any) => f.toString()) : tag.followers,
+        createdOn: tag.createdOn,
+      }));
+  
+      return { tags: plainTags, isNext }
     } catch (error) {
       console.log(error);
       throw error;
@@ -187,12 +198,16 @@ export async function getTopInteractedTags(params: GetTopInteractedTagsParams) {
       await connectToDatabase();
   
       const popularTags = await Tag.aggregate([
-        { $project: { name: 1, numberOfQuestions: { $size: "$questions" }}},
+        { $project: { _id: 1, name: 1, numberOfQuestions: { $size: "$questions" }}},
         { $sort: { numberOfQuestions: -1 }}, 
         { $limit: 6 }
       ])
   
-      return popularTags;
+      // Convert ObjectIds to strings
+      return popularTags.map(tag => ({
+        ...tag,
+        _id: tag._id.toString(),
+      }));
     } catch (error) {
       console.log(error);
       throw error;

@@ -1,6 +1,6 @@
 import { Schema } from "mongoose";
 
-import { IUser } from "@/mongodb";
+import { IUser } from "@/database/user.model";
 
 export interface CreateAnswerParams {
   content: string;
@@ -156,4 +156,59 @@ export interface GetUserStatsParams {
 
 export interface DeleteUserParams {
   clerkId: string;
+}
+
+export interface CreateChatGroupParams {
+  name: string;
+  description?: string;
+  tags: string[];
+  moderatorId: string;
+  path: string;
+}
+
+export interface GetChatGroupsParams {
+  tagId?: string;
+  searchQuery?: string;
+  page?: number;
+  pageSize?: number;
+  currentUserId?: string;
+}
+
+export interface JoinChatGroupParams {
+  chatGroupId: string;
+  userId: string;
+  path: string;
+}
+
+export interface SendMessageParams {
+  content: string;
+  authorId: string;
+  chatGroupId: string;
+  path: string;
+}
+
+export interface GetMessagesParams {
+  chatGroupId: string;
+  page?: number;
+  pageSize?: number;
+}
+
+export interface UpdateChatGroupParams {
+  chatGroupId: string;
+  name: string;
+  description?: string;
+  tags: string[];
+  path: string;
+}
+
+export interface DeleteChatGroupParams {
+  chatGroupId: string;
+  path: string;
+}
+
+export interface GetModeratorChatGroupsParams {
+  moderatorId: string;
+  searchQuery?: string;
+  page?: number;
+  pageSize?: number;
 }
