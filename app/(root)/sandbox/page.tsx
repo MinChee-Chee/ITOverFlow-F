@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import CodeEditor from '@/components/sandbox/CodeEditor'
 import PreviewFrame from '@/components/sandbox/PreviewFrame'
 import { Button } from '@/components/ui/button'
@@ -133,15 +133,38 @@ const SandboxPage = () => {
   const [output, setOutput] = useState('')
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const [isPrivileged, setIsPrivileged] = useState(false) // admin or moderator
+  const [roleLoading, setRoleLoading] = useState(true)
 
   const currentLanguage = getLanguageById(selectedLanguageId) || SUPPORTED_LANGUAGES[0]
 
   // Initialize code when language changes
-  React.useEffect(() => {
+  useEffect(() => {
     if (currentLanguage.mode === 'api' && !code) {
       setCode(currentLanguage.template)
     }
   }, [currentLanguage.id])
+
+  // Check if user is admin or moderator to bypass subscription requirement
+  useEffect(() => {
+    const checkRole = async () => {
+      try {
+        const response = await fetch('/api/auth/check-role')
+        if (response.ok) {
+          const data = await response.json()
+          if (data.isModerator || data.isAdmin) {
+            setIsPrivileged(true)
+          }
+        }
+      } catch (error) {
+        console.error('Error checking role for sandbox access:', error)
+      } finally {
+        setRoleLoading(false)
+      }
+    }
+
+    checkRole()
+  }, [])
 
   const handleLanguageChange = (languageId: string) => {
     setSelectedLanguageId(languageId)
@@ -228,31 +251,20 @@ const SandboxPage = () => {
     }
   }
 
-  return (
-    <Protect
-      plan="groupchat"
-      fallback={
-        <div className="w-full max-w-4xl mx-auto px-4 py-16 text-center">
-          <h1 className="h1-bold text-dark100_light900 mb-4">Code Sandbox - Premium Feature</h1>
-          <p className="body-regular text-dark500_light700 mb-8">
-            The Code Sandbox is available to subscribers. Subscribe to a plan to access this feature.
-          </p>
-          <Link href="/pricing">
-            <Button className="bg-primary-500 hover:bg-primary-400">
-              View Pricing Plans
-            </Button>
-          </Link>
-        </div>
-      }
-    >
-      <div className="w-full">
-        <div className="mb-6">
-          <h1 className="h1-bold text-dark100_light900 mb-2">Code Sandbox</h1>
-          <p className="text-dark500_light700 body-regular">
-            Write and test code in multiple programming languages. Browser-native languages (HTML/CSS/JS) run in a secure iframe, 
-            while other languages execute via Judge0 API service for secure, sandboxed execution.
-          </p>
-        </div>
+  // Avoid rendering until role check is done to prevent flicker
+  if (roleLoading) {
+    return null
+  }
+
+  const sandboxContent = (
+    <div className="w-full">
+      <div className="mb-6">
+        <h1 className="h1-bold text-dark100_light900 mb-2">Code Sandbox</h1>
+        <p className="text-dark500_light700 body-regular">
+          Write and test code in multiple programming languages. Browser-native languages (HTML/CSS/JS) run in a secure iframe, 
+          while other languages execute via Judge0 API service for secure, sandboxed execution.
+        </p>
+      </div>
 
       <div className="mb-4 flex flex-wrap gap-2 items-center">
         <div className="flex-1 min-w-[200px]">
@@ -354,7 +366,33 @@ const SandboxPage = () => {
           <li>Judge0 provides secure, sandboxed execution with time and memory limits</li>
         </ul>
       </div>
-      </div>
+    </div>
+  )
+
+  // Admins and moderators can access sandbox without subscription
+  if (isPrivileged) {
+    return sandboxContent
+  }
+
+  // Other users must have the required plan
+  return (
+    <Protect
+      plan="groupchat"
+      fallback={
+        <div className="w-full max-w-4xl mx-auto px-4 py-16 text-center">
+          <h1 className="h1-bold text-dark100_light900 mb-4">Code Sandbox - Premium Feature</h1>
+          <p className="body-regular text-dark500_light700 mb-8">
+            The Code Sandbox is available to subscribers. Subscribe to a plan to access this feature.
+          </p>
+          <Link href="/pricing">
+            <Button className="bg-primary-500 hover:bg-primary-400">
+              View Pricing Plans
+            </Button>
+          </Link>
+        </div>
+      }
+    >
+      {sandboxContent}
     </Protect>
   )
 }
