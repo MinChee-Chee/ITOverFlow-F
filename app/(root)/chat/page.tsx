@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback, useMemo, memo, useRef } from 'react';
 import { useUser } from '@clerk/nextjs';
-import CreateChatGroupDialog from '@/components/chat/CreateChatGroupDialog';
 import ChatGroupList from '@/components/chat/ChatGroupList';
 import ChatInterface from '@/components/chat/ChatInterface';
 import { Protect } from '@clerk/nextjs'
@@ -55,18 +54,20 @@ ChatContent.displayName = 'ChatContent';
 const ModeratorChatContent = memo(({ 
   selectedGroupId, 
   onGroupSelect,
-  onGroupCreated 
 }: { 
   selectedGroupId: string | null;
   onGroupSelect: (id: string) => void;
-  onGroupCreated: () => void;
 }) => (
   <div className="flex h-[calc(100vh-200px)] min-h-[600px]">
     {/* Sidebar - Chat Groups List */}
     <div className="w-1/3 border-r flex flex-col background-light900_dark200">
       <div className="p-4 border-b flex items-center justify-between">
         <h1 className="text-2xl font-bold text-dark200_light900">Chat Groups</h1>
-        <CreateChatGroupDialog onGroupCreated={onGroupCreated} />
+        <Link href="/moderator">
+          <Button size="sm" variant="outline">
+            Manage groups
+          </Button>
+        </Link>
       </div>
       <ChatGroupList
         selectedGroupId={selectedGroupId || undefined}
@@ -131,11 +132,6 @@ function ChatPage() {
     setSelectedGroupId(id);
   }, []);
 
-  const handleGroupCreated = useCallback(() => {
-    // The ChatGroupList component will automatically refresh via its useEffect
-    // No need to reload the entire page
-  }, []);
-
   // Memoize fallback component to prevent re-creation
   const fallbackContent = useMemo(() => (
     <div className="w-full max-w-4xl mx-auto px-4 py-16 text-center">
@@ -170,7 +166,6 @@ function ChatPage() {
       <ModeratorChatContent
         selectedGroupId={selectedGroupId}
         onGroupSelect={handleGroupSelect}
-        onGroupCreated={handleGroupCreated}
       />
     );
   }

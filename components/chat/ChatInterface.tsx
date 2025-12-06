@@ -37,19 +37,31 @@ export default function ChatInterface({ chatGroupId }: ChatInterfaceProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const pusherRef = useRef<Pusher | null>(null);
   const channelRef = useRef<any>(null);
+  const loadControllerRef = useRef<AbortController | null>(null);
+  const isMountedRef = useRef(true);
 
   useEffect(() => {
+    isMountedRef.current = true;
+
     if (chatGroupId) {
       loadMessages();
       setupPusher();
     }
 
     return () => {
+      isMountedRef.current = false;
+
       if (channelRef.current) {
         channelRef.current.unbind_all();
+        channelRef.current.unsubscribe();
       }
       if (pusherRef.current) {
         pusherRef.current.disconnect();
+      }
+
+      if (loadControllerRef.current) {
+        loadControllerRef.current.abort();
+        loadControllerRef.current = null;
       }
     };
   }, [chatGroupId]);
@@ -108,32 +120,78 @@ export default function ChatInterface({ chatGroupId }: ChatInterfaceProps) {
   const loadMessages = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch(`/api/chat/messages?chatGroupId=${chatGroupId}`);
-      if (!response.ok) throw new Error('Failed to load messages');
+      // Abort any in-flight request when switching groups
+      if (loadControllerRef.current) {
+        loadControllerRef.current.abort();
+      }
+
+      const controller = new AbortController();
+      loadControllerRef.current = controller;
+
+      const response = await fetch(
+        `/api/chat/messages?chatGroupId=${chatGroupId}`,
+        { signal: controller.signal },
+      );
+
+      if (!response.ok) {
+        // Try to surface backend error for easier debugging
+        let detail = '';
+        try {
+          const body = await response.json();
+          if (body?.error) detail = `: ${body.error}`;
+        } catch {
+          // ignore JSON parse issues
+        }
+        throw new Error(
+          `Failed to load messages (status ${response.status}${detail})`,
+        );
+      }
       
       const data = await response.json();
-      // Remove duplicates and sort by createdAt
-      const uniqueMessages = (data.messages || []).reduce((acc: Message[], message: Message) => {
-        if (!acc.find(m => m._id === message._id)) {
-          acc.push(message);
-        }
-        return acc;
-      }, [] as Message[]).sort((a: Message, b: Message) => 
-        new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
-      );
-      setMessages(uniqueMessages);
+
+      // Remove duplicates, sort by createdAt, and cap the list size for performance
+      const uniqueMessages = (data.messages || [])
+        .reduce((acc: Message[], message: Message) => {
+          if (!acc.find((m) => m._id === message._id)) {
+            acc.push(message);
+          }
+          return acc;
+        }, [] as Message[])
+        .sort(
+          (a: Message, b: Message) =>
+            new Date(a.createdAt).getTime() -
+            new Date(b.createdAt).getTime(),
+        )
+        .slice(-200); // keep only the latest 200 messages
+
+      if (isMountedRef.current) {
+        setMessages(uniqueMessages);
+      }
 
       // After loading messages for an open group, mark as read
       await markGroupAsRead();
     } catch (error) {
+      if (
+        error instanceof DOMException &&
+        (error.name === 'AbortError' || error.message === 'The user aborted a request.')
+      ) {
+        // Expected when switching groups quickly; no user-facing error
+        return;
+      }
+
       console.error('Error loading messages:', error);
       toast({
-        title: "Error",
-        description: "Failed to load messages",
-        variant: "destructive",
+        title: 'Error',
+        description:
+          error instanceof Error
+            ? error.message
+            : 'Failed to load messages',
+        variant: 'destructive',
       });
     } finally {
-      setIsLoading(false);
+      if (isMountedRef.current) {
+        setIsLoading(false);
+      }
     }
   };
 

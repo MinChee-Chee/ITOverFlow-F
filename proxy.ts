@@ -1,6 +1,6 @@
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from 'next/server';
-import { apiRateLimit, strictApiRateLimit, authRateLimit } from '@/lib/middleware/rate-limit';
+import { apiRateLimit, strictApiRateLimit, authRateLimit, chatRateLimit, sandboxRateLimit } from '@/lib/middleware/rate-limit';
 import { apiDDoSProtection } from '@/lib/middleware/ddos-protection';
 
 const isProtectedRoute = createRouteMatcher([
@@ -33,11 +33,18 @@ export default clerkMiddleware(async (auth, req: NextRequest) => {
         return authLimit;
       }
     }
-    // Stricter rate limiting for resource-intensive routes
-    else if (isSandboxRoute(req) || isChatRoute(req)) {
-      const strictLimit = await strictApiRateLimit(req);
-      if (strictLimit) {
-        return strictLimit;
+    // Dedicated rate limiting for sandbox routes
+    else if (isSandboxRoute(req)) {
+      const sandboxLimit = await sandboxRateLimit(req);
+      if (sandboxLimit) {
+        return sandboxLimit;
+      }
+    }
+    // Dedicated rate limiting for chat routes (higher throughput)
+    else if (isChatRoute(req)) {
+      const chatLimit = await chatRateLimit(req);
+      if (chatLimit) {
+        return chatLimit;
       }
     }
     // Standard rate limiting for other API routes

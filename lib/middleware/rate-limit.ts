@@ -88,19 +88,33 @@ export function rateLimit(options: RateLimitOptions) {
 // Predefined rate limiters for different use cases
 export const apiRateLimit = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  maxRequests: 100, // 100 requests per 15 minutes
+  maxRequests: 300, // 300 requests per 15 minutes
   message: 'API rate limit exceeded. Please try again later.',
+});
+
+// Less strict limiter for high-frequency chat traffic
+export const chatRateLimit = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  maxRequests: 120, // 120 requests per minute per user/IP
+  message: 'Too many chat requests. Please slow down.',
+});
+
+// Dedicated limiter for sandbox API routes (still guarded, but less strict)
+export const sandboxRateLimit = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  maxRequests: 40, // 40 requests per minute per user/IP
+  message: 'Too many sandbox requests. Please slow down.',
 });
 
 export const strictApiRateLimit = rateLimit({
   windowMs: 60 * 1000, // 1 minute
-  maxRequests: 10, // 10 requests per minute
+  maxRequests: 40, // 40 requests per minute
   message: 'Too many requests. Please slow down.',
 });
 
 export const authRateLimit = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  maxRequests: 5, // 5 login attempts per 15 minutes
+  maxRequests: 10, // 10 login attempts per 15 minutes
   message: 'Too many authentication attempts. Please try again later.',
 });
 
