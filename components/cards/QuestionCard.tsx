@@ -56,7 +56,6 @@ const QuestionCard = ({
         <SignedIn>
           {showActionButtons && (
             <>
-              {console.log("showActionButtons:", showActionButtons)}
               <EditDeleteAction type="Question" itemId={JSON.stringify(_id)} />
             </>
           )}
