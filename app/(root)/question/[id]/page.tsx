@@ -7,11 +7,12 @@ import TagCard from "@/components/cards/TagCard";
 import Votes from "@/components/shared/Votes";
 import { getQuestionById } from "@/lib/actions/question.action";
 import { getUserById } from "@/lib/actions/user.action";
-import { formatAndDivideNumber, getTimestamp } from "@/lib/utils";
+import { formatAndDivideNumber } from "@/lib/utils";
 import { auth } from "@clerk/nextjs/server";
 import Image from "next/image";
 import Link from "next/link";
 import React from "react";
+import ClientTimestamp from "@/components/shared/ClientTimestamp";
 
 const Question = async ({params, searchParams}: any) => {
   const resolvedParams = await params;
@@ -55,13 +56,20 @@ const Question = async ({params, searchParams}: any) => {
     <h2 className="h2-semibold text-dark200_light900 mt-3.5 w-full text-left">{result.title}</h2>
     </div>
     <div className="mb-8 mt-5 flex flex-wrap gap-4">
-        <Metric
-          imgUrl="/assets/icons/clock.svg"
-          alt="clock icon"
-          value={` asked ${getTimestamp(result.createdAt)}`}
-          title=""
-          textStyles="small-medium text-dark400_light800"
-        />
+        <div className="flex items-center gap-2">
+          <Metric
+            imgUrl="/assets/icons/clock.svg"
+            alt="clock icon"
+            value=""
+            title=""
+            textStyles="small-medium text-dark400_light800"
+          />
+          <ClientTimestamp
+            createdAt={result.createdAt}
+            prefix="asked "
+            className="small-medium text-dark400_light800"
+          />
+        </div>
         <Metric
           imgUrl="/assets/icons/message.svg"
           alt="message"
