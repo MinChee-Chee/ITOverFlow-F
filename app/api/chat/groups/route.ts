@@ -70,6 +70,15 @@ export async function GET(req: NextRequest) {
   try {
     const { userId } = await auth();
 
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const isAdmin = await checkRole('admin');
+    if (!isAdmin) {
+      return NextResponse.json({ error: 'Only admins can access chat groups' }, { status: 403 });
+    }
+
     const { searchParams } = new URL(req.url);
     const tagId = searchParams.get('tagId') || undefined;
     const searchQuery = searchParams.get('searchQuery') || undefined;
