@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Play, RotateCcw, Trash2, Loader2 } from 'lucide-react'
 import { SUPPORTED_LANGUAGES, getLanguageById } from '@/constants/languages'
-import { Protect } from '@clerk/nextjs'
+import { Protect, useUser } from '@clerk/nextjs'
 import Link from 'next/link'
 
 // Default template code for HTML/CSS/JS
@@ -135,6 +135,7 @@ const SandboxPage = () => {
   const [isLoading, setIsLoading] = useState(false)
   const [isPrivileged, setIsPrivileged] = useState(false) // admin or moderator
   const [roleLoading, setRoleLoading] = useState(true)
+  const { isLoaded, isSignedIn } = useUser()
 
   const currentLanguage = getLanguageById(selectedLanguageId) || SUPPORTED_LANGUAGES[0]
 
@@ -252,7 +253,7 @@ const SandboxPage = () => {
   }
 
   // Avoid rendering until role check is done to prevent flicker
-  if (roleLoading) {
+  if (roleLoading || !isLoaded) {
     return null
   }
 
@@ -379,16 +380,24 @@ const SandboxPage = () => {
     <Protect
       plan="groupchat"
       fallback={
-        <div className="w-full max-w-4xl mx-auto px-4 py-16 text-center">
-          <h1 className="h1-bold text-dark100_light900 mb-4">Code Sandbox - Premium Feature</h1>
-          <p className="body-regular text-dark500_light700 mb-8">
-            The Code Sandbox is available to subscribers. Subscribe to a plan to access this feature.
+        <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-6">
+          <div className="w-20 h-20 rounded-full bg-primary-500/10 flex items-center justify-center mb-4">
+            <Play className="h-10 w-10 text-primary-500" />
+          </div>
+          <h1 className="h2-bold text-dark100_light900 mb-3">Sandbox is premium</h1>
+          <p className="text-dark500_light700 max-w-md mb-6">
+            Sign in with an eligible plan to use the code sandbox, or upgrade to unlock this feature.
           </p>
-          <Link href="/pricing">
-            <Button className="bg-primary-500 hover:bg-primary-400">
-              View Pricing Plans
-            </Button>
-          </Link>
+          <div className="flex gap-3">
+            <Link href="/pricing">
+              <Button className="bg-primary-500 hover:bg-primary-400 px-6">View pricing</Button>
+            </Link>
+            {!isSignedIn && (
+              <Link href="/sign-in">
+                <Button variant="outline" className="px-6">Sign in</Button>
+              </Link>
+            )}
+          </div>
         </div>
       }
     >

@@ -2,9 +2,10 @@ import Link from "next/link";
 import React from "react";
 import TagCard from "./TagCard";
 import Metric from "../shared/Metric";
-import { formatAndDivideNumber, getTimestamp } from "@/lib/utils";
+import { formatAndDivideNumber } from "@/lib/utils";
 import { SignedIn } from "@clerk/nextjs";
 import EditDeleteAction from "../shared/EditDeleteAction";
+import ClientTimestamp from "../shared/ClientTimestamp";
 
 interface QuestionProps {
   _id: string;
@@ -43,9 +44,10 @@ const QuestionCard = ({
     <div className="card-wrapper rounded-[10px] p-9 sm:px-11">
       <div className="flex flex-col-reverse items-start justify-between gap-5 sm:flex-row">
         <div>
-          <span className="subtle-regular text-dark400_light700 line-clamp-1 flex sm:hidden" suppressHydrationWarning>
-            {getTimestamp(createdAt)}
-          </span>
+          <ClientTimestamp
+            createdAt={createdAt}
+            className="subtle-regular text-dark400_light700 line-clamp-1 flex sm:hidden"
+          />
           <Link href={`/question/${_id}`}>
             <h3 className="sm:h3-semibold base-semibold text-dark200_light900 line-clamp-1 flex-1">
               {title}
@@ -56,7 +58,6 @@ const QuestionCard = ({
         <SignedIn>
           {showActionButtons && (
             <>
-              {console.log("showActionButtons:", showActionButtons)}
               <EditDeleteAction type="Question" itemId={JSON.stringify(_id)} />
             </>
           )}
@@ -70,15 +71,22 @@ const QuestionCard = ({
       </div>
 
       <div className="flex-between mt-6 w-full flex-wrap gap-3">
-          <Metric 
-            imgUrl={author.picture}
-            alt="user"
-            value={author.name}
-            title={` - asked ${getTimestamp(createdAt)}`}
-            href={`/profile/${author.clerkId}`}
-            isAuthor
-            textStyles="body-medium text-dark400_light700"
-          />
+          <div className="flex items-center gap-2">
+            <Metric 
+              imgUrl={author.picture}
+              alt="user"
+              value={author.name}
+              title="•"
+              href={`/profile/${author.clerkId}`}
+              isAuthor
+              textStyles="body-medium text-dark400_light700"
+            />
+            <ClientTimestamp
+              createdAt={createdAt}
+              prefix="asked "
+              className="small-regular text-dark400_light700"
+            />
+          </div>
           <div className="flex items-center gap-3 max-sm:flex-wrap
           max-sm:justify-start">
           <Metric 

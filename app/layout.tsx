@@ -23,8 +23,8 @@ const spaceGrotesk = SpaceGroktest({
 })
 
 export const metadata: Metadata = {
-  title: 'DevOverFlow-HCMUTE',
-  description: 'A place for developers to ask questions and find answers',
+  title: 'IT Overflow',
+  description: 'A place for IT developers to ask questions and find answers',
   icons: {
     icon:'/assets/images/site-logo.svg',
   }
