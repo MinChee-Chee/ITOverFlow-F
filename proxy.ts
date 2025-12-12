@@ -54,6 +54,9 @@ export default clerkMiddleware(async (auth, req: NextRequest) => {
         return apiLimit;
       }
     }
+
+    // Require authentication for all API routes
+    await auth.protect();
   }
 
   // Clerk authentication checks

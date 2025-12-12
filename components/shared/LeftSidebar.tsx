@@ -27,13 +27,21 @@ const LeftSidebar = () => {
       <div className="flex flex-1 flex-col gap-6">
         {sidebarLinks.map((item) => {
           const isActive = (pathname.includes(item.route) && item.route.length > 1) || pathname === item.route;
+          const showAuthLinks = mounted && isLoaded && !!userId;
 
           // Profile and Pricing links should only show when user is logged in
           if(item.route === '/profile' || item.route === '/pricing') {
-            // Only show these links if auth is loaded and user is authenticated
-            // During SSR, we'll render null to maintain consistency
-            if(!mounted || !isLoaded || !userId) {
-              return null;
+            // Render a deterministic placeholder during SSR / unauthenticated states
+            if(!showAuthLinks) {
+              return (
+                <div
+                  key={item.label}
+                  className="flex items-center justify-start gap-4 rounded-lg bg-transparent p-4 text-dark300_light900"
+                >
+                  <div className="h-5 w-5 rounded-md bg-light-800 dark:bg-dark-300" />
+                  <div className="h-4 w-24 rounded-md bg-light-800 dark:bg-dark-300 max-lg:hidden" />
+                </div>
+              );
             }
             
             // If user is logged in, compute the href

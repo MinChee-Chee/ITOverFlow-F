@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input'
 import { formUrlQuery, removeKeysFromQuery } from '@/lib/utils'
 import Image from 'next/image'
 import { usePathname, useRouter, useSearchParams} from 'next/navigation'
-import React, { useEffect, useState, useRef } from 'react'
+import React, { useEffect, useState, useRef, useMemo } from 'react'
 
 interface CustomInputProps {
   route: string
@@ -30,6 +30,10 @@ const LocalSearchbar = ({
   const previousQueryRef = useRef(query);
 
   const [search, setSearch] = useState(query || '');
+  const inputId = useMemo(() => {
+    const normalizedRoute = route.replace(/[^a-z0-9]/gi, '-').replace(/-+/g, '-');
+    return `local-search-${normalizedRoute || 'home'}`;
+  }, [route]);
 
   // Sync search state with URL query param when it changes externally
   useEffect(() => {
@@ -97,6 +101,8 @@ const LocalSearchbar = ({
 
       <Input
         type="text"
+        id={inputId}
+        name={inputId}
         placeholder={placeholder}
         value={search}
         onChange={(e) => setSearch(e.target.value)}
