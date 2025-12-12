@@ -1,5 +1,5 @@
 "use client"
-import React, { useEffect } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 
 import Prism from 'prismjs'
 import parse from 'html-react-parser'
@@ -30,15 +30,19 @@ interface Props {
   data: string;
 }
 
-const ParseHTML = ({data} : Props) => {
-  useEffect(() => {
-    Prism.highlightAll();
-  }, [])
+const ParseHTML = ({ data }: Props) => {
+  // Parse once per `data` value so initial render isn't empty
+  const parsedContent = useMemo(() => parse(data), [data])
 
+  // Highlight after render when content is present
+  useEffect(() => {
+    if (!parsedContent) return
+    Prism.highlightAll()
+  }, [parsedContent])
 
   return (
     <div className={'markdown w-full min-w-full'}>
-      {parse(data)}
+      {parsedContent}
     </div>
   )
 }

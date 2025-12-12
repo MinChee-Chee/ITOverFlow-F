@@ -6,8 +6,9 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { FaHistory, FaRobot, FaUser, FaCopy, FaEye, FaComment, FaArrowUp, FaSpinner } from "react-icons/fa"
 import { IoMdArrowBack, IoMdRefresh } from "react-icons/io"
-import { formatAndDivideNumber, getTimestamp } from "@/lib/utils"
+import { formatAndDivideNumber, getDeviconClassName } from "@/lib/utils"
 import { useRouter } from "next/navigation"
+import ClientTimestamp from "@/components/shared/ClientTimestamp"
 
 type HistoryItem = {
   id: string
@@ -105,11 +106,13 @@ export default function RecommendationHistoryPage() {
                 body: JSON.stringify({ ids: batch }),
               })
               
-              if (questionRes.ok) {
-                const responseData = await questionRes.json().catch(() => ({}))
+              if (!questionRes.ok) {
+                return []
+              }
+
+              const responseData = await questionRes.json().catch(() => ({}))
               const { questions } = responseData || {}
               return Array.isArray(questions) ? questions : []
-              }
             } catch (err) {
               console.warn("Failed to fetch question batch:", err)
             }
@@ -240,7 +243,8 @@ export default function RecommendationHistoryPage() {
 
   useEffect(() => {
     if (!mounted || !isLoaded || roleLoading) return
-    if (!isPrivileged && !isSignedIn) return
+    // Require both a signed-in user and privileged role before fetching history
+    if (!isPrivileged || !isSignedIn) return
     fetchHistory()
   }, [fetchHistory, isLoaded, isPrivileged, isSignedIn, mounted, roleLoading])
 
@@ -428,16 +432,21 @@ export default function RecommendationHistoryPage() {
                           {/* Tags */}
                           {metadata.tags && Array.isArray(metadata.tags) && metadata.tags.length > 0 ? (
                             <div className="flex flex-wrap items-center gap-1.5 flex-1 min-w-0">
-                              {metadata.tags.slice(0, 2).map((tag: any) => (
-                                <span
-                                  key={tag._id || tag}
-                                  className="text-[10px] px-1.5 py-0.5 rounded-md bg-primary-500/10 hover:bg-primary-500/20 text-primary-500 dark:text-primary-400 whitespace-nowrap font-medium transition-colors"
-                                  title={tag.name || tag}
-                                  onClick={(e) => e.stopPropagation()}
-                                >
-                                  {tag.name || tag}
-                                </span>
-                              ))}
+                              {metadata.tags.slice(0, 2).map((tag: any) => {
+                                const tagName = tag.name || tag
+                                const iconClass = getDeviconClassName(tagName)
+                                return (
+                                  <span
+                                    key={tag._id || tag}
+                                    className="text-[10px] px-1.5 py-0.5 rounded-md bg-primary-500/10 hover:bg-primary-500/20 text-primary-500 dark:text-primary-400 whitespace-nowrap font-medium transition-colors flex items-center gap-1"
+                                    title={tagName}
+                                    onClick={(e) => e.stopPropagation()}
+                                  >
+                                    <i className={`${iconClass} text-xs`}></i>
+                                    <span>{tagName}</span>
+                                  </span>
+                                )
+                              })}
                               {metadata.tags.length > 2 && (
                                 <span className="text-[10px] text-dark400_light700 whitespace-nowrap font-medium">+{metadata.tags.length - 2}</span>
                               )}
@@ -472,7 +481,9 @@ export default function RecommendationHistoryPage() {
                                   try {
                                     const date = new Date(metadata.createdAt);
                                     if (date instanceof Date && !isNaN(date.getTime())) {
-                                      return getTimestamp(date);
+                                      return (
+                                        <ClientTimestamp createdAt={date} />
+                                      );
                                     }
                                     return "";
                                   } catch {

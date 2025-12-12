@@ -5,8 +5,9 @@ import { Protect, useUser } from "@clerk/nextjs"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Loader2, Send, Bot, User, X, Copy, Eye, MessageSquare, ArrowUp, Sparkles, History as HistoryIcon } from "lucide-react"
-import { formatAndDivideNumber, getTimestamp } from "@/lib/utils"
+import { formatAndDivideNumber, getDeviconClassName } from "@/lib/utils"
 import { useRouter } from "next/navigation"
+
 
 type RecommendationResult = {
   ids: string[]
@@ -252,7 +253,7 @@ export default function RecommendationPage() {
       </div>
 
       {/* Messages Area */}
-      <div className="flex-1 overflow-y-auto px-6 py-6 space-y-4 bg-light-50 dark:bg-dark-400">
+      <div className="flex-1 overflow-y-auto px-6 py-6 space-y-4 bg-light-50 dark:bg-dark-400 mt-2">
         {messages.length === 0 && (
           <div className="flex flex-col items-center justify-center h-full text-center py-12 px-4">
             <div className="w-20 h-20 rounded-full bg-primary-500/10 flex items-center justify-center mb-6">
@@ -389,15 +390,20 @@ export default function RecommendationPage() {
                           {/* Tags */}
                           {metadata.tags && Array.isArray(metadata.tags) && metadata.tags.length > 0 ? (
                             <div className="flex flex-wrap items-center gap-1.5 flex-1 min-w-0">
-                              {metadata.tags.slice(0, 2).map((tag: any) => (
-                                <span
-                                  key={tag._id || tag}
-                                  className="text-[10px] px-1.5 py-0.5 rounded-md bg-primary-500/10 hover:bg-primary-500/20 text-primary-500 dark:text-primary-400 whitespace-nowrap font-medium transition-colors"
-                                  title={tag.name || tag}
-                                >
-                                  {tag.name || tag}
-                                </span>
-                              ))}
+                              {metadata.tags.slice(0, 2).map((tag: any) => {
+                                const tagName = tag.name || tag
+                                const iconClass = getDeviconClassName(tagName)
+                                return (
+                                  <span
+                                    key={tag._id || tag}
+                                    className="text-[10px] px-1.5 py-0.5 rounded-md bg-primary-500/10 hover:bg-primary-500/20 text-primary-500 dark:text-primary-400 whitespace-nowrap font-medium transition-colors flex items-center gap-1"
+                                    title={tagName}
+                                  >
+                                    <i className={`${iconClass} text-xs`}></i>
+                                    <span>{tagName}</span>
+                                  </span>
+                                )
+                              })}
                               {metadata.tags.length > 2 && (
                                 <span className="text-[10px] text-dark400_light700 whitespace-nowrap font-medium">+{metadata.tags.length - 2}</span>
                               )}

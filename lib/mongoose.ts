@@ -80,59 +80,48 @@ export const connectToDatabase = async () => {
     // Attach listeners immediately, before any connection attempts
     attachListeners();
 
-    // Check if already connected and connection is ready
+    // Fast path: already connected
     const readyState = mongoose.connection.readyState;
-    // 0 = disconnected, 1 = connected, 2 = connecting, 3 = disconnecting
-    if (readyState === 1) {
-        return; // Already connected
-    }
+    if (readyState === 1) return;
 
-    // If there's already a connection in progress, wait for it
-    if (connectionPromise) {
-        return connectionPromise;
-    }
+    // Atomically create or reuse the in-flight connection promise
+    connectionPromise ??= (async () => {
+        // Re-check after microtask scheduling
+        const state = mongoose.connection.readyState;
+        if (state === 1) return;
 
-    // If connecting, wait a bit for it to complete (max 5 seconds)
-    if (readyState === 2) {
-        connectionPromise = new Promise<void>((resolve, reject) => {
-            let attempts = 0;
-            const maxAttempts = 50; // 50 * 100ms = 5 seconds max wait
-            const checkConnection = () => {
-                attempts++;
-                const currentState = mongoose.connection.readyState;
-                if (currentState === 1) {
-                    connectionPromise = null;
-                    resolve();
-                } else if (currentState === 0 || attempts >= maxAttempts) {
-                    // Connection failed or timeout, proceed with new connection
-                    // Keep connectionPromise reference until performConnect completes
-                    performConnect()
-                        .then(() => {
-                            connectionPromise = null;
-                            resolve();
-                        })
-                        .catch((err) => {
-                            connectionPromise = null;
-                            reject(err);
-                        });
-                } else {
-                    // Still connecting, wait a bit more
-                    setTimeout(checkConnection, 100);
-                }
-            };
-            checkConnection();
-        });
-        return connectionPromise;
-    }
+        // If already connecting, wait for it to complete with a bounded poll
+        if (state === 2) {
+            await waitForReadyOrConnect();
+            return;
+        }
 
-    // Perform the actual connection
-    connectionPromise = performConnect();
+        await performConnect();
+    })();
+
     try {
         await connectionPromise;
     } finally {
+        // Always clear so callers can retry after success or failure (including states 2/3)
         connectionPromise = null;
     }
 }
+
+const waitForReadyOrConnect = async () => {
+    let attempts = 0;
+    const maxAttempts = 50; // ~5 seconds @ 100ms
+
+    while (attempts < maxAttempts) {
+        const state = mongoose.connection.readyState;
+        if (state === 1) return; // connected
+        if (state === 0) break;  // disconnected, attempt fresh connect
+        attempts += 1;
+        await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+
+    // If still not connected, try to establish a fresh connection
+    await performConnect();
+};
 
 const performConnect = async () => {
     try {
