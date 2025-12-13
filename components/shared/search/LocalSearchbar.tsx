@@ -28,6 +28,8 @@ const LocalSearchbar = ({
   const query = searchParams.get('q');
   const isUpdatingUrlRef = useRef(false);
   const previousQueryRef = useRef(query);
+  const previousSearchRef = useRef(query || '');
+  const searchParamsStringRef = useRef(searchParams.toString());
 
   const [search, setSearch] = useState(query || '');
   const inputId = useMemo(() => {
@@ -35,31 +37,69 @@ const LocalSearchbar = ({
     return `local-search-${normalizedRoute || 'home'}`;
   }, [route]);
 
-  // Sync search state with URL query param when it changes externally
+  // Auto-refresh for home page only (every 10 seconds)
+  useEffect(() => {
+    // Only enable auto-refresh on home page
+    if (route !== '/' || pathname !== '/') {
+      return;
+    }
+
+    const intervalId = setInterval(() => {
+      // Refresh the page by updating the URL with current search params
+      // This will trigger a re-render of the server component
+      // Use router.refresh() to refresh the current route without navigation
+      router.refresh();
+    }, 10000); // 10 seconds
+
+    return () => clearInterval(intervalId);
+  }, [route, pathname, router]);
+
+  // Sync search state with URL query param when it changes externally (only on mount or external changes)
   useEffect(() => {
     const urlQuery = searchParams.get('q');
+    const currentParamsString = searchParams.toString();
     
     // Only sync if URL query changed externally (not from our own update)
     if (isUpdatingUrlRef.current) {
       isUpdatingUrlRef.current = false;
       previousQueryRef.current = urlQuery;
+      searchParamsStringRef.current = currentParamsString;
       return;
     }
 
-    // If URL query changed and it's different from our state, sync it
-    if (urlQuery !== previousQueryRef.current) {
+    // Only update if the actual query value changed (not just the searchParams object reference)
+    if (urlQuery !== previousQueryRef.current && urlQuery !== search) {
       setSearch(urlQuery || '');
       previousQueryRef.current = urlQuery;
+      previousSearchRef.current = urlQuery || '';
+      searchParamsStringRef.current = currentParamsString;
+    } else if (currentParamsString !== searchParamsStringRef.current) {
+      // Update ref even if query didn't change, to track params changes
+      searchParamsStringRef.current = currentParamsString;
     }
-  }, [searchParams]);
+  }, [query, search]); // Use query (string) instead of searchParams (object)
 
-  // Debounce and update URL when search changes
+  // Debounce and update URL when search changes (only if user actually typed)
   useEffect(() => {
+    // Skip if search hasn't actually changed from previous value
+    if (search === previousSearchRef.current) {
+      return;
+    }
+
+    // Capture current params at the time the effect runs (not in the timeout)
+    const currentParamsString = searchParams.toString();
+    const currentQuery = query;
+
+    // Update the ref immediately to prevent duplicate calls
+    previousSearchRef.current = search;
+
     const delayDebounceFn = setTimeout(() => {
-      const currentQuery = searchParams.get('q');
+      // Get fresh query value to check if URL was updated externally
+      const freshQuery = searchParams.get('q');
       
-      // Only update if search actually changed
-      if (currentQuery === search) {
+      // Only update if search actually changed from URL
+      // This prevents unnecessary updates if URL was already updated
+      if (freshQuery === search) {
         return;
       }
 
@@ -67,25 +107,25 @@ const LocalSearchbar = ({
 
       if(search) {
         const newUrl = formUrlQuery({
-          params: searchParams.toString(),
+          params: currentParamsString,
           key:'q',
           value: search
         })
 
-        router.push( newUrl, { scroll: false});
+        router.replace( newUrl, { scroll: false});
       } else {
         if (pathname === route){
           const newUrl = removeKeysFromQuery({
-            params: searchParams.toString(),
+            params: currentParamsString,
             keysToRemove: ['q'],
           })
-          router.push( newUrl, { scroll: false});
+          router.replace( newUrl, { scroll: false});
         }
       }
     }, 500);
 
     return () => clearTimeout(delayDebounceFn);
-  }, [search, route, pathname, router, searchParams]);
+  }, [search, route, pathname, router]); // Only depend on search state, not query
 
   return (
     <div className={`background-light800_darkgradient flex min-h-[56px] grow items-center gap-4 rounded-[10px] px-4 ${otherClasses}`}>

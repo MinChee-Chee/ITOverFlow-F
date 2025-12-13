@@ -47,7 +47,7 @@ const Filter = memo(({filters, otherClasses, containerClasses}:(Props)) => {
         const params = new URLSearchParams(searchParamsRef.current.toString())
         params.set('filter', value)
         params.set('page', '1')
-        router.push(`${pathnameRef.current}?${params.toString()}`, {scroll: false})
+        router.replace(`${pathnameRef.current}?${params.toString()}`, {scroll: false})
     }, [paramFilter, router]) // Removed searchParams and pathname from dependencies
 
   return (
