@@ -86,16 +86,14 @@ const LocalSearchbar = ({
       return;
     }
 
-    // Capture current params at the time the effect runs (not in the timeout)
-    const currentParamsString = searchParams.toString();
-    const currentQuery = query;
-
     // Update the ref immediately to prevent duplicate calls
     previousSearchRef.current = search;
 
     const delayDebounceFn = setTimeout(() => {
-      // Get fresh query value to check if URL was updated externally
+      // Get fresh values to check if URL was updated externally
+      // This prevents race conditions where params change during the debounce delay
       const freshQuery = searchParams.get('q');
+      const freshParamsString = searchParams.toString();
       
       // Only update if search actually changed from URL
       // This prevents unnecessary updates if URL was already updated
@@ -107,7 +105,7 @@ const LocalSearchbar = ({
 
       if(search) {
         const newUrl = formUrlQuery({
-          params: currentParamsString,
+          params: freshParamsString,
           key:'q',
           value: search
         })
@@ -116,7 +114,7 @@ const LocalSearchbar = ({
       } else {
         if (pathname === route){
           const newUrl = removeKeysFromQuery({
-            params: currentParamsString,
+            params: freshParamsString,
             keysToRemove: ['q'],
           })
           router.replace( newUrl, { scroll: false});
