@@ -57,13 +57,26 @@ async function embedQuery(text: string) {
 
 export async function POST(req: Request) {
   try {
+    // Get clerkId early to ensure auth context is available
+    const { userId: clerkId } = await auth();
+    
     const body = await req.json();
     const query = (body?.query as string | undefined)?.trim();
     const topK = Number(body?.topK ?? 5);
     const collectionName = process.env.CHROMA_COLLECTION || "questions";
 
-    if (!query) {
+    // Validate query
+    if (!query || query.length === 0) {
       return NextResponse.json({ error: "Query is required" }, { status: 400 });
+    }
+    
+    if (query.length > 1000) {
+      return NextResponse.json({ error: "Query is too long. Maximum length is 1000 characters." }, { status: 400 });
+    }
+    
+    // Validate topK
+    if (isNaN(topK) || topK < 1 || topK > 20) {
+      return NextResponse.json({ error: "topK must be a number between 1 and 20" }, { status: 400 });
     }
 
     const client = getClient();
@@ -211,24 +224,75 @@ export async function POST(req: Request) {
     };
 
     // Save history asynchronously (non-blocking)
-    (async () => {
+    // Use the clerkId we got earlier to avoid auth context issues
+    if (clerkId && query && Array.isArray(ids) && ids.length > 0) {
+      // Ensure database is connected (it should be from earlier, but ensure it)
       try {
-        const { userId: clerkId } = await auth();
-        if (clerkId) {
-          await connectToDatabase();
-          await RecommendationHistory.create({
-            clerkId,
-            query,
-            topK: Math.min(Math.max(topK, 1), 20),
-            resultIds: ids,
-            distances: distances,
+        await connectToDatabase();
+        
+        // Prepare history data with validation
+        const historyData = {
+          clerkId,
+          query: query.trim().substring(0, 1000), // Limit query length to prevent DB issues
+          topK: Math.min(Math.max(topK, 1), 20),
+          resultIds: ids
+            .filter((id): id is string => id !== null && id !== undefined && typeof id === 'string')
+            .slice(0, 100), // Limit to prevent excessive data
+          distances: Array.isArray(distances) 
+            ? distances
+                .filter((d): d is number => d !== null && d !== undefined && typeof d === 'number' && !isNaN(d))
+                .slice(0, 100) // Match resultIds length
+            : undefined,
+        };
+        
+        // Only save if we have at least a query and valid structure
+        if (historyData.query && historyData.query.length > 0 && Array.isArray(historyData.resultIds) && historyData.resultIds.length > 0) {
+          // Save history in background without blocking the response
+          // Add timeout to prevent hanging promises
+          const savePromise = RecommendationHistory.create(historyData);
+          const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('History save timeout')), 5000)
+          );
+          
+          Promise.race([savePromise, timeoutPromise])
+            .then((savedHistory: any) => {
+              console.log(`✅ Successfully saved recommendation history for clerkId: ${clerkId}, historyId: ${savedHistory?._id}, query: "${historyData.query.substring(0, 50)}", results: ${historyData.resultIds.length}`);
+            })
+            .catch((err) => {
+              // Log error but don't fail the request
+              console.error("❌ Failed to save recommendation history:", err);
+              console.error("Error details:", {
+                clerkId,
+                query: historyData.query.substring(0, 50),
+                resultIdsCount: historyData.resultIds.length,
+                topK: historyData.topK,
+                errorMessage: err instanceof Error ? err.message : String(err),
+                errorStack: err instanceof Error ? err.stack : undefined,
+              });
+            });
+        } else {
+          console.warn("Skipping history save - invalid data structure:", {
+            hasQuery: !!historyData.query,
+            queryLength: historyData.query?.length || 0,
+            resultIdsIsArray: Array.isArray(historyData.resultIds),
+            resultIdsLength: historyData.resultIds?.length || 0,
           });
         }
-      } catch (err) {
-        console.warn("Failed to save recommendation history:", err);
-        // Don't throw - history saving is non-critical
+      } catch (dbErr) {
+        // Log but don't fail the request
+        console.error("Database connection error when saving history:", dbErr);
       }
-    })();
+    } else {
+      if (!clerkId) {
+        console.warn("No clerkId found, skipping history save. User may not be authenticated.");
+      } else if (!query) {
+        console.warn("No query provided, skipping history save.");
+      } else if (!Array.isArray(ids)) {
+        console.warn("Invalid ids format, skipping history save. Expected array, got:", typeof ids);
+      } else if (ids.length === 0) {
+        console.warn("Empty ids array, skipping history save.");
+      }
+    }
 
     return NextResponse.json(response);
   } catch (error) {

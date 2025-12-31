@@ -93,7 +93,13 @@ export default function RecommendationPage() {
     e.stopPropagation() // Prevent event bubbling
     
     const trimmedQuery = query.trim()
-    if (!trimmedQuery || isLoading) return
+    // Validate query length and prevent empty submissions
+    if (!trimmedQuery || isLoading || trimmedQuery.length > 1000) {
+      if (trimmedQuery.length > 1000) {
+        setError("Query is too long. Please keep it under 1000 characters.")
+      }
+      return
+    }
 
     // Prevent double submission
     setIsLoading(true)
@@ -185,6 +191,7 @@ export default function RecommendationPage() {
     if (!isSignedIn) {
       hasRedirected.current = true
       router.replace("/sign-in")
+      return
     }
   }, [isLoaded, isSignedIn, mounted, router])
 

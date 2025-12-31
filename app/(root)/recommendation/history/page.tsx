@@ -56,10 +56,12 @@ export default function RecommendationHistoryPage() {
     setIsLoadingHistory(true)
     setHistoryError(null)
     try {
-      const res = await fetch("/api/recommendation/history?limit=500")
+      const res = await fetch("/api/recommendation/history?limit=500", {
+        cache: 'no-store', // Ensure fresh data
+      })
       if (!res.ok) {
         const data = await res.json().catch(() => ({}))
-        throw new Error(data.error || "Failed to fetch history")
+        throw new Error(data.error || `Failed to fetch history (${res.status})`)
       }
       const data = await res.json()
       if (!Array.isArray(data)) {
@@ -100,13 +102,21 @@ export default function RecommendationHistoryPage() {
           
           const batchPromises = batches.map(async (batch) => {
             try {
+              // Add timeout to prevent hanging requests
+              const controller = new AbortController()
+              const timeoutId = setTimeout(() => controller.abort(), 10000) // 10 second timeout
+              
               const questionRes = await fetch("/api/recommendation/questions", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ ids: batch }),
+                signal: controller.signal,
               })
               
+              clearTimeout(timeoutId)
+              
               if (!questionRes.ok) {
+                console.warn(`Failed to fetch question batch: ${questionRes.status}`)
                 return []
               }
 
@@ -114,7 +124,11 @@ export default function RecommendationHistoryPage() {
               const { questions } = responseData || {}
               return Array.isArray(questions) ? questions : []
             } catch (err) {
-              console.warn("Failed to fetch question batch:", err)
+              if (err instanceof Error && err.name === 'AbortError') {
+                console.warn("Question batch fetch timed out")
+              } else {
+                console.warn("Failed to fetch question batch:", err)
+              }
             }
             return []
           })
@@ -216,6 +230,7 @@ export default function RecommendationHistoryPage() {
     if (!isSignedIn) {
       hasRedirected.current = true
       router.replace("/sign-in")
+      return
     }
   }, [isLoaded, isSignedIn, mounted, router])
 
@@ -243,10 +258,10 @@ export default function RecommendationHistoryPage() {
 
   useEffect(() => {
     if (!mounted || !isLoaded || roleLoading) return
-    // Require both a signed-in user and privileged role before fetching history
-    if (!isPrivileged || !isSignedIn) return
+    // Require signed-in user to fetch history (all users can see their own history)
+    if (!isSignedIn) return
     fetchHistory()
-  }, [fetchHistory, isLoaded, isPrivileged, isSignedIn, mounted, roleLoading])
+  }, [fetchHistory, isLoaded, isSignedIn, mounted, roleLoading])
 
   if (!mounted || !isLoaded || roleLoading) {
     return null
@@ -520,8 +535,23 @@ export default function RecommendationHistoryPage() {
     </div>
   )
 
-  if (isPrivileged) {
-    return historyContent
+  // Show history content for all signed-in users
+  // The Protect component below handles premium access if needed
+  if (!isSignedIn) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-6">
+        <div className="w-20 h-20 rounded-full bg-primary-500/10 flex items-center justify-center mb-4">
+          <FaHistory className="h-10 w-10 text-primary-500" />
+        </div>
+        <h1 className="h2-bold text-dark100_light900 mb-3">Sign in to view history</h1>
+        <p className="text-dark500_light700 max-w-md mb-6">
+          Please sign in to view your recommendation history.
+        </p>
+        <Link href="/sign-in">
+          <Button className="bg-primary-500 hover:bg-primary-400 px-6">Sign in</Button>
+        </Link>
+      </div>
+    )
   }
 
   return (
@@ -540,11 +570,6 @@ export default function RecommendationHistoryPage() {
             <Link href="/pricing">
               <Button className="bg-primary-500 hover:bg-primary-400 px-6">View pricing</Button>
             </Link>
-            {!isSignedIn && (
-              <Link href="/sign-in">
-                <Button variant="outline" className="px-6">Sign in</Button>
-              </Link>
-            )}
           </div>
         </div>
       }
