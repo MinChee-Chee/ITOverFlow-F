@@ -23,7 +23,9 @@ const isWebhookRoute = createRouteMatcher(['/api/webhooks(.*)']);
 
 export default clerkMiddleware(async (auth, req: NextRequest) => {
   // Early return for public routes (webhooks, sign-in, sign-up)
-  if (isPublicRoute(req)) {
+  // Check both the route matcher and the path directly to ensure webhooks are excluded
+  const pathname = req.nextUrl.pathname;
+  if (isPublicRoute(req) || pathname.startsWith('/api/webhooks')) {
     return NextResponse.next();
   }
 
@@ -86,10 +88,10 @@ export default clerkMiddleware(async (auth, req: NextRequest) => {
 });
 
 export const config = {
-  // Apply middleware to all routes except static files and Next.js internals
+  // Apply middleware to all routes except static files, Next.js internals, and webhooks
+  // Webhooks are excluded from the matcher so middleware never runs for them
   matcher: [
-    "/((?!.*\\..*|_next).*)", 
-    "/", 
-    "/(api|trpc)(.*)"
+    // Standard Next.js pattern excluding static files, Next.js internals, and webhooks
+    '/((?!_next|api/webhooks|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)',
   ],
 };
