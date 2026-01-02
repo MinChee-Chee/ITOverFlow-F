@@ -5,7 +5,7 @@ import React, { Suspense } from 'react'
 import Theme from './Theme'
 import MobileNav from './MobileNav'
 import GlobalSearch from '../search/GlobalSearch'
-
+import MenubarComponent from '../Menubar'
 const Navbar = () => {
   return (
     <nav className='flex-between background-light900_dark200 
@@ -30,6 +30,7 @@ const Navbar = () => {
         </Suspense>
 
         <div className='flex-between gap-5'>
+            <MenubarComponent/>
             <Theme/>
             
             <SignedIn>

@@ -71,15 +71,20 @@ export default function ChatGroupList({ selectedGroupId, onGroupSelect }: ChatGr
       if (tagFilter) params.set('tagId', tagFilter);
       
       const response = await fetch(`/api/chat/groups?${params.toString()}`);
-      if (!response.ok) throw new Error('Failed to load chat groups');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        const errorMessage = errorData.error || 'Failed to load chat groups';
+        throw new Error(errorMessage);
+      }
       
       const data = await response.json();
       setChatGroups(data.chatGroups || []);
     } catch (error) {
       console.error('Error loading chat groups:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to load chat groups';
       toast({
         title: "Error",
-        description: "Failed to load chat groups",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {

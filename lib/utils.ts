@@ -173,10 +173,46 @@ export const fetcher = async (url: string) => {
   const res = await fetch(url);
   
   if (!res.ok) {
-    const error = new Error('An error occurred while fetching the data.');
+    // Try to get error message from JSON response
+    const contentType = res.headers.get('content-type');
+    let errorMessage = 'An error occurred while fetching the data.';
+    
+    if (contentType && contentType.includes('application/json')) {
+      try {
+        const errorData = await res.json();
+        errorMessage = errorData.error || errorData.message || errorMessage;
+      } catch {
+        // If JSON parsing fails, use default message
+      }
+    } else {
+      // If response is HTML, try to get text for debugging
+      try {
+        const text = await res.text();
+        // Log HTML responses for debugging (usually error pages)
+        if (text.includes('<!DOCTYPE') || text.includes('<html')) {
+          console.error(`Received HTML instead of JSON from ${url}. Status: ${res.status}`);
+        }
+      } catch {
+        // Ignore errors when reading text
+      }
+    }
+    
+    const error = new Error(errorMessage);
     // Attach extra info to the error object
     (error as any).status = res.status;
     throw error;
+  }
+  
+  // Check if response is actually JSON before parsing
+  const contentType = res.headers.get('content-type');
+  if (!contentType || !contentType.includes('application/json')) {
+    const text = await res.text();
+    // If we got HTML, log it for debugging
+    if (text.includes('<!DOCTYPE') || text.includes('<html')) {
+      console.error(`Received HTML instead of JSON from ${url}. Response preview:`, text.substring(0, 200));
+      throw new Error(`Expected JSON but received HTML from ${url}. This usually means the API route returned an error page.`);
+    }
+    throw new Error(`Expected JSON response but got ${contentType || 'unknown content type'} from ${url}`);
   }
   
   return res.json();

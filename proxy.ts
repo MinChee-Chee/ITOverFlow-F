@@ -70,6 +70,38 @@ export default clerkMiddleware(async (auth, req: NextRequest) => {
     }
   }
 
+  // Get auth data early to check locked/banned status before requiring auth
+  const authData = await auth();
+  
+  // Check if user is locked or banned (before requiring authentication)
+  // This allows us to return proper JSON errors for API routes
+  if (authData.userId) {
+    const sessionClaims = authData.sessionClaims as any;
+    const isLocked = sessionClaims?.metadata?.locked === true || 
+                     sessionClaims?.publicMetadata?.locked === true;
+    const isBanned = sessionClaims?.metadata?.banned === true || 
+                     sessionClaims?.publicMetadata?.banned === true;
+
+    // Allow access to sign-out and public routes even if locked/banned
+    // But block access to all other routes
+    if ((isLocked || isBanned) && !isPublicRoute(req) && !pathname.startsWith('/sign-out')) {
+      // For API routes, return JSON error instead of redirect
+      if (isApiRoute(req)) {
+        return NextResponse.json(
+          { 
+            error: isBanned ? 'Your account has been banned' : 'Your account has been locked',
+            code: isBanned ? 'BANNED' : 'LOCKED'
+          },
+          { status: 403 }
+        );
+      }
+      // For page routes, redirect to sign-in
+      const url = new URL('/sign-in', req.url);
+      url.searchParams.set('error', isBanned ? 'banned' : 'locked');
+      return NextResponse.redirect(url);
+    }
+  }
+
   // Require authentication for all API routes
   if (isApiRoute(req)) {
     await auth.protect();
@@ -81,9 +113,19 @@ export default clerkMiddleware(async (auth, req: NextRequest) => {
   }
 
   // Protect all routes starting with `/admin`
-  if (isAdminRoute(req) && (await auth()).sessionClaims?.metadata?.role !== 'admin') {
-    const url = new URL('/', req.url);
-    return NextResponse.redirect(url);
+  // For API routes, return JSON error instead of redirect
+  if (isAdminRoute(req)) {
+    const adminAuthData = await auth();
+    if (adminAuthData.sessionClaims?.metadata?.role !== 'admin') {
+      if (isApiRoute(req)) {
+        return NextResponse.json(
+          { error: 'Unauthorized: Admin access required' },
+          { status: 403 }
+        );
+      }
+      const url = new URL('/', req.url);
+      return NextResponse.redirect(url);
+    }
   }
 });
 
