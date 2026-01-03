@@ -28,7 +28,7 @@ export default function TagHover({ _id, name, children, questions }: TagHoverPro
     setError(null);
 
     try {
-      const response = await fetch('/api/google-gemini/tag-info', {
+      const response = await fetch('/api/huggingface/tag-info', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -4,7 +4,7 @@ import Filter from './Filter';
 import { AnswerFilters } from '@/constants/filters';
 import Link from 'next/link';
 import Image from 'next/image';
-import ParseHTML from './ParseHTML';
+import ExpandableAnswer from './ExpandableAnswer';
 import Votes from './Votes';
 import Pagination from './Pagination';
 import ClientTimestamp from './ClientTimestamp';
@@ -72,7 +72,7 @@ const AllAnswers = async ({questionId, userId, totalAnswers, page, filter} :Prop
                             hasdownVoted={userId ? answer.downvotes.includes(userId): false}
                         />
                     </div>
-                    <ParseHTML data={answer.content}/>
+                    <ExpandableAnswer content={answer.content} />
                 </article>
             ))}
         </div>

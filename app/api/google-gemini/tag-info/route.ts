@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextRequest, NextResponse } from "next/server";
 import { GoogleGenAI } from "@google/genai";
+import { HfInference } from "@huggingface/inference";
 
 export const POST = async (request: NextRequest) => {
   try {
@@ -26,12 +27,92 @@ Requirements:
 Tag: ${tagName}
 Description:`;
 
-    const geminiApiKey = process.env.TAG_GOOGLE_GEMINI || process.env.GOOGLE_GEMINI_API_KEY_TAG
-    ;
+    // Try Hugging Face first (preferred)
+    const hfApiKey = process.env.HUGGINGFACE_API_KEY;
+    if (hfApiKey) {
+      try {
+        const hf = new HfInference(hfApiKey);
+        const modelsToTry = [
+          'mistralai/Mistral-7B-Instruct-v0.2',
+          'microsoft/Phi-3-mini-4k-instruct',
+          'google/flan-t5-xxl',
+        ];
+
+        for (const model of modelsToTry) {
+          try {
+            console.log(`[Tag Info] Trying Hugging Face model: ${model} for tag: ${tagName}`);
+            
+            const response = await hf.textGeneration({
+              model,
+              inputs: `You are a helpful technical assistant that provides clear and concise descriptions of programming technologies and tags.\n\n${prompt}`,
+              parameters: {
+                max_new_tokens: 50,
+                temperature: 0.7,
+                return_full_text: false,
+              },
+            });
+
+            // Handle different response formats
+            let rawDescription: string | null = null;
+            const responseAny = response as any;
+            if (typeof responseAny === 'string') {
+              rawDescription = responseAny.trim();
+            } else if (responseAny && typeof responseAny === 'object') {
+              if ('generated_text' in responseAny && typeof responseAny.generated_text === 'string') {
+                rawDescription = responseAny.generated_text.trim();
+              } else if ('text' in responseAny && typeof responseAny.text === 'string') {
+                rawDescription = responseAny.text.trim();
+              }
+            }
+
+            if (rawDescription) {
+              const sentences = rawDescription.split(/[.!?]+/).filter(s => s.trim().length > 0);
+              if (sentences.length > 0) {
+                let description = sentences[0].trim();
+                if (!description.match(/[.!?]$/)) {
+                  description += '.';
+                }
+                description = description.replace(/\*\*/g, '').replace(/\*/g, '').trim();
+                
+                if (description && description.length > 10) {
+                  console.log(`[Tag Info] Successfully used Hugging Face model: ${model}`);
+                  return NextResponse.json({ description }, {
+                    headers: { 'Content-Type': 'application/json' }
+                  });
+                }
+              }
+            }
+          } catch (err: any) {
+            console.log(`[Tag Info] Hugging Face model ${model} failed:`, err.message);
+            continue;
+          }
+        }
+      } catch (err: any) {
+        console.log(`[Tag Info] Hugging Face failed:`, err.message);
+        // Don't fall back to Gemini if Hugging Face is configured - avoid quota issues
+        if (hfApiKey) {
+          return NextResponse.json(
+            { error: `Hugging Face API failed: ${err.message}. Please check your API key and model availability.` },
+            { status: 500 }
+          );
+        }
+      }
+    }
+
+    // Only use Gemini if Hugging Face is NOT configured
+    const geminiApiKey = process.env.TAG_GOOGLE_GEMINI || process.env.GOOGLE_GEMINI_API_KEY_TAG;
+    
+    // If Hugging Face is configured, never use Gemini (to avoid quota issues)
+    if (hfApiKey) {
+      return NextResponse.json(
+        { error: 'Hugging Face API is configured. Please use /api/huggingface/tag-info endpoint instead, or configure Hugging Face API key properly.' },
+        { status: 500 }
+      );
+    }
     
     if (!geminiApiKey) {
       return NextResponse.json(
-        { error: 'Google Gemini API key is not configured' },
+        { error: 'Neither Hugging Face nor Google Gemini API key is configured' },
         { status: 500 }
       );
     }

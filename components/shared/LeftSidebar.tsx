@@ -16,16 +16,31 @@ const LeftSidebar = () => {
     setMounted(true);
   }, []);
   
-  const isActiveRoute = (route: string) => {
-    if (!mounted || !pathname) return false;
-    if (route === '/' && pathname === '/') return true;
-    if (route.length > 1) {
-      return pathname.includes(route) || pathname === route;
-    }
-    return false;
-  };
-  
   const stableSidebarLinks = useMemo(() => sidebarLinks, []);
+  
+  // Compute active states - always return false on server to match initial client render
+  const activeStates = useMemo(() => {
+    const states = new Map<string, boolean>();
+    if (!mounted || !pathname) {
+      // On server or before mount, all routes are inactive
+      stableSidebarLinks.forEach((item) => {
+        states.set(item.route, false);
+      });
+      return states;
+    }
+    
+    // After mount, compute actual active states
+    stableSidebarLinks.forEach((item) => {
+      let isActive = false;
+      if (item.route === '/' && pathname === '/') {
+        isActive = true;
+      } else if (item.route.length > 1) {
+        isActive = pathname.includes(item.route) || pathname === item.route;
+      }
+      states.set(item.route, isActive);
+    });
+    return states;
+  }, [mounted, pathname, stableSidebarLinks]);
   
   return (
     <section 
@@ -34,7 +49,7 @@ const LeftSidebar = () => {
     >
       <div className="flex flex-1 flex-col gap-6">
         {stableSidebarLinks.map((item) => {
-          const isActive = mounted ? isActiveRoute(item.route) : false;
+          const isActive = activeStates.get(item.route) || false;
           const baseClasses = "flex items-center justify-start gap-4 bg-transparent p-4";
           const linkClassName = isActive
             ? `primary-gradient rounded-lg text-light-900 ${baseClasses}`

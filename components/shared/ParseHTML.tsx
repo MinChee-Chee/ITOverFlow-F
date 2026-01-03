@@ -31,17 +31,33 @@ interface Props {
 }
 
 const ParseHTML = ({ data }: Props) => {
+  const containerRef = React.useRef<HTMLDivElement>(null)
+  
   // Parse once per `data` value so initial render isn't empty
   const parsedContent = useMemo(() => parse(data), [data])
 
   // Highlight after render when content is present
   useEffect(() => {
-    if (!parsedContent) return
-    Prism.highlightAll()
+    if (!parsedContent || !containerRef.current) return
+    // Use setTimeout to ensure DOM is ready after hydration
+    const timer = setTimeout(() => {
+      // Only highlight code blocks within this container
+      const codeBlocks = containerRef.current?.querySelectorAll('pre code')
+      if (codeBlocks) {
+        codeBlocks.forEach((block) => {
+          Prism.highlightElement(block as HTMLElement)
+        })
+      }
+    }, 0)
+    return () => clearTimeout(timer)
   }, [parsedContent])
 
   return (
-    <div className={'markdown w-full min-w-full'}>
+    <div 
+      ref={containerRef}
+      className={'markdown w-full min-w-full'} 
+      suppressHydrationWarning
+    >
       {parsedContent}
     </div>
   )
