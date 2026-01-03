@@ -55,6 +55,7 @@ export default function RecommendationPage() {
   const { isLoaded, isSignedIn } = useUser()
   const router = useRouter()
   const hasRedirected = useRef(false)
+  const hasCheckedRole = useRef(false)
 
   const clearChat = () => {
     setMessages([])
@@ -182,40 +183,91 @@ export default function RecommendationPage() {
   useEffect(() => {
     // Avoid hydration mismatches by waiting for client mount
     setMounted(true)
+    // Reset refs on mount to ensure fresh checks on navigation
+    hasCheckedRole.current = false
+    hasRedirected.current = false
     // Don't load history - recommendation page always starts empty
     // History is only shown on the dedicated history page
   }, [])
 
+  // Handle authentication and role checking in a single, stable flow
   useEffect(() => {
-    if (!mounted || !isLoaded || hasRedirected.current) return
-    if (!isSignedIn) {
-      hasRedirected.current = true
-      router.replace("/sign-in")
-      return
-    }
-  }, [isLoaded, isSignedIn, mounted, router])
-
-  useEffect(() => {
+    // Wait for mount and Clerk to be ready
     if (!mounted || !isLoaded) return
 
+    // Handle unauthenticated users
+    if (!isSignedIn) {
+      if (!hasRedirected.current) {
+        hasRedirected.current = true
+        router.replace("/sign-in")
+      }
+      setRoleLoading(false)
+      setIsPrivileged(false)
+      return
+    }
+
+    // Reset and check role on each mount/navigation
+    // This ensures fresh checks when navigating between pages
+    hasCheckedRole.current = false
+    setIsPrivileged(false)
+    setRoleLoading(true)
+
+    // Check role for privileged access
+    let isCancelled = false
     const checkRole = async () => {
       try {
-        const response = await fetch("/api/auth/check-role")
+        const response = await fetch("/api/auth/check-role", {
+          cache: 'no-store',
+          headers: {
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache',
+          }
+        })
+        
+        // Check if cancelled before processing
+        if (isCancelled) return
+        
+        // Check if response is JSON before parsing
+        const contentType = response.headers.get('content-type')
+        if (!contentType || !contentType.includes('application/json')) {
+          console.warn("Received non-JSON response from /api/auth/check-role:", contentType)
+          if (!isCancelled) {
+            setIsPrivileged(false)
+            setRoleLoading(false)
+          }
+          return
+        }
+        
         if (response.ok) {
           const data = await response.json()
-          if (data.isModerator || data.isAdmin) {
-            setIsPrivileged(true)
+          if (!isCancelled) {
+            setIsPrivileged(data.isModerator === true || data.isAdmin === true)
+            hasCheckedRole.current = true
+          }
+        } else {
+          if (!isCancelled) {
+            setIsPrivileged(false)
           }
         }
       } catch (error) {
-        console.error("Error checking role for recommendation access:", error)
+        if (!isCancelled) {
+          console.error("Error checking role for recommendation access:", error)
+          setIsPrivileged(false)
+        }
       } finally {
-        setRoleLoading(false)
+        if (!isCancelled) {
+          setRoleLoading(false)
+        }
       }
     }
 
     checkRole()
-  }, [isLoaded, mounted])
+    
+    // Cleanup function to cancel if component unmounts or dependencies change
+    return () => {
+      isCancelled = true
+    }
+  }, [isLoaded, isSignedIn, mounted, router])
 
   if (!mounted || !isLoaded || roleLoading) {
     return null

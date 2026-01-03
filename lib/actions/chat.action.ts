@@ -141,7 +141,7 @@ export async function getChatGroups(params: GetChatGroupsParams) {
   try {
     await connectToDatabase();
 
-    const { tagId, searchQuery, page = 1, pageSize = 10, currentUserId } = params;
+    const { tagId, searchQuery, page = 1, pageSize = 10, currentUserId, joinedOnly } = params;
     const skipAmount = (page - 1) * pageSize;
 
     const query: FilterQuery<typeof ChatGroup> = {};
@@ -156,6 +156,11 @@ export async function getChatGroups(params: GetChatGroupsParams) {
         { name: { $regex: new RegExp(escapedQuery, 'i') } },
         { description: { $regex: new RegExp(escapedQuery, 'i') } },
       ];
+    }
+
+    // Filter by membership if joinedOnly is true
+    if (joinedOnly && currentUserId) {
+      query.members = { $in: [new Types.ObjectId(currentUserId)] };
     }
 
     const chatGroups = await ChatGroup.find(query)

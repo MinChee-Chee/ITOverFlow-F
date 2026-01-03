@@ -26,7 +26,7 @@ export const sidebarLinks: SidebarLink[] = [
       label: "Tags",
     },
     {
-      imgURL: "/assets/icons/currency-dollar-circle.svg",
+      imgURL: "/assets/icons/money-bag.svg",
       route: "/pricing",
       label:"Pricing"
     },

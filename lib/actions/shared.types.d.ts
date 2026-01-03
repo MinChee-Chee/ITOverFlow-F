@@ -172,6 +172,7 @@ export interface GetChatGroupsParams {
   page?: number;
   pageSize?: number;
   currentUserId?: string;
+  joinedOnly?: boolean;
 }
 
 export interface JoinChatGroupParams {

@@ -140,6 +140,7 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const tagId = searchParams.get('tagId') || undefined;
     const searchQuery = searchParams.get('searchQuery') || undefined;
+    const joinedOnly = searchParams.get('joinedOnly') === 'true';
     const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
     const pageSize = Math.min(50, Math.max(1, parseInt(searchParams.get('pageSize') || '10', 10)));
 
@@ -163,6 +164,7 @@ export async function GET(req: NextRequest) {
       page,
       pageSize,
       currentUserId,
+      joinedOnly: joinedOnly && currentUserId ? true : undefined,
     });
 
     return NextResponse.json(result);

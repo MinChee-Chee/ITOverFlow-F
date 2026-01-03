@@ -41,6 +41,8 @@ interface ChatGroupListProps {
   onGroupSelect?: (groupId: string) => void;
 }
 
+type ChatFilter = 'all' | 'joined';
+
 export default function ChatGroupList({ selectedGroupId, onGroupSelect }: ChatGroupListProps) {
   const { user } = useUser();
   const [chatGroups, setChatGroups] = useState<ChatGroup[]>([]);
@@ -48,6 +50,7 @@ export default function ChatGroupList({ selectedGroupId, onGroupSelect }: ChatGr
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
   const [tagFilter, setTagFilter] = useState<string | null>(null);
+  const [filter, setFilter] = useState<ChatFilter>('all');
 
   // Debounce search query
   useEffect(() => {
@@ -58,10 +61,10 @@ export default function ChatGroupList({ selectedGroupId, onGroupSelect }: ChatGr
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  // Load chat groups when debounced search query or tag filter changes
+  // Load chat groups when debounced search query, tag filter, or filter changes
   useEffect(() => {
     loadChatGroups();
-  }, [debouncedSearchQuery, tagFilter]);
+  }, [debouncedSearchQuery, tagFilter, filter]);
 
   const loadChatGroups = async () => {
     setIsLoading(true);
@@ -69,6 +72,7 @@ export default function ChatGroupList({ selectedGroupId, onGroupSelect }: ChatGr
       const params = new URLSearchParams();
       if (debouncedSearchQuery) params.set('searchQuery', debouncedSearchQuery);
       if (tagFilter) params.set('tagId', tagFilter);
+      if (filter === 'joined') params.set('joinedOnly', 'true');
       
       const response = await fetch(`/api/chat/groups?${params.toString()}`);
       if (!response.ok) {
@@ -167,9 +171,33 @@ export default function ChatGroupList({ selectedGroupId, onGroupSelect }: ChatGr
     );
   }
 
+  // Filter groups client-side if needed (as backup)
+  const filteredGroups = filter === 'joined' 
+    ? chatGroups.filter(group => isMember(group))
+    : chatGroups;
+
   return (
     <div className="flex flex-col h-full">
       <div className="p-4 border-b space-y-4">
+        {/* Filter Buttons */}
+        <div className="flex gap-2">
+          <Button
+            variant={filter === 'all' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setFilter('all')}
+            className="flex-1"
+          >
+            All
+          </Button>
+          <Button
+            variant={filter === 'joined' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setFilter('joined')}
+            className="flex-1"
+          >
+            Rooms you're in
+          </Button>
+        </div>
         <Input
           placeholder="Search chat groups..."
           value={searchQuery}
@@ -178,13 +206,15 @@ export default function ChatGroupList({ selectedGroupId, onGroupSelect }: ChatGr
       </div>
       
       <div className="flex-1 overflow-y-auto">
-        {chatGroups.length === 0 ? (
+        {filteredGroups.length === 0 ? (
           <div className="flex items-center justify-center p-8">
-            <p className="text-muted-foreground">No chat groups found</p>
+            <p className="text-muted-foreground">
+              {filter === 'joined' ? 'No joined rooms found' : 'No chat groups found'}
+            </p>
           </div>
         ) : (
           <div className="space-y-2 p-4">
-            {chatGroups.map((group) => {
+            {filteredGroups.map((group) => {
               const userIsMember = isMember(group);
               const isSelected = selectedGroupId === group._id;
 

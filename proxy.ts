@@ -10,6 +10,7 @@ const isProtectedRoute = createRouteMatcher([
 
 const isPublicRoute = createRouteMatcher([
   '/api/webhooks(.*)', // Webhooks use signature verification, not user auth
+  '/api/auth/check-role', // Check role endpoint should be accessible to check auth status
   '/sign-in(.*)',
   '/sign-up(.*)',
 ]);
@@ -22,10 +23,10 @@ const isSandboxRoute = createRouteMatcher(['/api/sandbox(.*)']);
 const isWebhookRoute = createRouteMatcher(['/api/webhooks(.*)']);
 
 export default clerkMiddleware(async (auth, req: NextRequest) => {
-  // Early return for public routes (webhooks, sign-in, sign-up)
+  // Early return for public routes (webhooks, sign-in, sign-up, check-role)
   // Check both the route matcher and the path directly to ensure webhooks are excluded
   const pathname = req.nextUrl.pathname;
-  if (isPublicRoute(req) || pathname.startsWith('/api/webhooks')) {
+  if (isPublicRoute(req) || pathname.startsWith('/api/webhooks') || pathname === '/api/auth/check-role') {
     return NextResponse.next();
   }
 
@@ -104,7 +105,15 @@ export default clerkMiddleware(async (auth, req: NextRequest) => {
 
   // Require authentication for all API routes
   if (isApiRoute(req)) {
-    await auth.protect();
+    try {
+      await auth.protect();
+    } catch (error) {
+      // If protect() throws (user not authenticated), return JSON error instead of redirect
+      return NextResponse.json(
+        { error: 'Unauthorized: Authentication required' },
+        { status: 401 }
+      );
+    }
   }
 
   // Clerk authentication checks

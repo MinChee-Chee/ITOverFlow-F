@@ -1,3 +1,4 @@
+
 "use client"
 
 import {
@@ -19,7 +20,7 @@ import { useUser } from "@clerk/nextjs"
 import Link from "next/link"
 
 export default function MenubarComponent() {
-  const { user } = useUser()
+  const { user, isLoaded } = useUser()
   const userId = user?.id
 
   return (
@@ -27,7 +28,9 @@ export default function MenubarComponent() {
       <MenubarMenu>
         <MenubarTrigger>User</MenubarTrigger>
         <MenubarContent>
-          {userId ? (
+          {!isLoaded ? (
+            <MenubarItem disabled>Loading...</MenubarItem>
+          ) : userId ? (
             <>
               <MenubarItem asChild>
                 <Link href={`/profile/${userId}`}>
@@ -52,27 +55,37 @@ export default function MenubarComponent() {
       <MenubarMenu>
         <MenubarTrigger>Subcriber</MenubarTrigger>
         <MenubarContent>
-          <MenubarItem>
-            Undo <MenubarShortcut>⌘Z</MenubarShortcut>
-          </MenubarItem>
-          <MenubarItem>
-            Redo <MenubarShortcut>⇧⌘Z</MenubarShortcut>
+          <MenubarItem asChild>
+            <Link href="/chat">Chat Groups</Link>
           </MenubarItem>
           <MenubarSeparator />
           <MenubarSub>
-            <MenubarSubTrigger>Find</MenubarSubTrigger>
+            <MenubarSubTrigger>Chat AI</MenubarSubTrigger>
             <MenubarSubContent>
-              <MenubarItem>Search the web</MenubarItem>
-              <MenubarSeparator />
-              <MenubarItem>Find...</MenubarItem>
-              <MenubarItem>Find Next</MenubarItem>
-              <MenubarItem>Find Previous</MenubarItem>
+              <MenubarItem asChild>
+                <Link href="/chatAI">Chat AI Assistant</Link>
+              </MenubarItem>
+              <MenubarItem asChild>
+                <Link href="/chatAI/history">Chat AI History</Link>
+              </MenubarItem>
             </MenubarSubContent>
           </MenubarSub>
           <MenubarSeparator />
-          <MenubarItem>Cut</MenubarItem>
-          <MenubarItem>Copy</MenubarItem>
-          <MenubarItem>Paste</MenubarItem>
+          <MenubarSub>
+            <MenubarSubTrigger>Recommendation</MenubarSubTrigger>
+            <MenubarSubContent>
+              <MenubarItem asChild>
+                <Link href="/recommendation">Recommendations</Link>
+              </MenubarItem>
+              <MenubarItem asChild>
+                <Link href="/recommendation/history">Recommendation History</Link>
+              </MenubarItem>
+            </MenubarSubContent>
+          </MenubarSub>
+          <MenubarSeparator />
+          <MenubarItem asChild>
+            <Link href="/sandbox">Code Sandbox</Link>
+          </MenubarItem>
         </MenubarContent>
       </MenubarMenu>
       <MenubarMenu>

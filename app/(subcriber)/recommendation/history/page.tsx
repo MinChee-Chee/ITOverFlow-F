@@ -51,6 +51,7 @@ export default function RecommendationHistoryPage() {
   const { isLoaded, isSignedIn } = useUser()
   const router = useRouter()
   const hasRedirected = useRef(false)
+  const hasCheckedRole = useRef(false)
 
   const fetchHistory = useCallback(async () => {
     setIsLoadingHistory(true)
@@ -59,6 +60,15 @@ export default function RecommendationHistoryPage() {
       const res = await fetch("/api/recommendation/history?limit=500", {
         cache: 'no-store', // Ensure fresh data
       })
+      
+      // Check if response is JSON before parsing
+      const contentType = res.headers.get('content-type')
+      if (!contentType || !contentType.includes('application/json')) {
+        const text = await res.text().catch(() => '')
+        console.error("Received non-JSON response from /api/recommendation/history:", contentType, text.substring(0, 200))
+        throw new Error(`Server returned ${contentType || 'non-JSON'} response. Please try again.`)
+      }
+      
       if (!res.ok) {
         const data = await res.json().catch(() => ({}))
         throw new Error(data.error || `Failed to fetch history (${res.status})`)
@@ -114,6 +124,13 @@ export default function RecommendationHistoryPage() {
               })
               
               clearTimeout(timeoutId)
+              
+              // Check if response is JSON before parsing
+              const questionContentType = questionRes.headers.get('content-type')
+              if (!questionContentType || !questionContentType.includes('application/json')) {
+                console.warn(`Received non-JSON response from /api/recommendation/questions: ${questionContentType}`)
+                return []
+              }
               
               if (!questionRes.ok) {
                 console.warn(`Failed to fetch question batch: ${questionRes.status}`)
@@ -223,38 +240,89 @@ export default function RecommendationHistoryPage() {
 
   useEffect(() => {
     setMounted(true)
+    // Reset refs on mount to ensure fresh checks on navigation
+    hasCheckedRole.current = false
+    hasRedirected.current = false
   }, [])
 
+  // Handle authentication and role checking in a single, stable flow
   useEffect(() => {
-    if (!mounted || !isLoaded || hasRedirected.current) return
-    if (!isSignedIn) {
-      hasRedirected.current = true
-      router.replace("/sign-in")
-      return
-    }
-  }, [isLoaded, isSignedIn, mounted, router])
-
-  useEffect(() => {
+    // Wait for mount and Clerk to be ready
     if (!mounted || !isLoaded) return
 
+    // Handle unauthenticated users
+    if (!isSignedIn) {
+      if (!hasRedirected.current) {
+        hasRedirected.current = true
+        router.replace("/sign-in")
+      }
+      setRoleLoading(false)
+      setIsPrivileged(false)
+      return
+    }
+
+    // Reset and check role on each mount/navigation
+    // This ensures fresh checks when navigating between pages
+    hasCheckedRole.current = false
+    setIsPrivileged(false)
+    setRoleLoading(true)
+
+    // Check role for privileged access
+    let isCancelled = false
     const checkRole = async () => {
       try {
-        const response = await fetch("/api/auth/check-role")
+        const response = await fetch("/api/auth/check-role", {
+          cache: 'no-store',
+          headers: {
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache',
+          }
+        })
+        
+        // Check if cancelled before processing
+        if (isCancelled) return
+        
+        // Check if response is JSON before parsing
+        const contentType = response.headers.get('content-type')
+        if (!contentType || !contentType.includes('application/json')) {
+          console.warn("Received non-JSON response from /api/auth/check-role:", contentType)
+          if (!isCancelled) {
+            setIsPrivileged(false)
+            setRoleLoading(false)
+          }
+          return
+        }
+        
         if (response.ok) {
           const data = await response.json()
-          if (data.isModerator || data.isAdmin) {
-            setIsPrivileged(true)
+          if (!isCancelled) {
+            setIsPrivileged(data.isModerator === true || data.isAdmin === true)
+            hasCheckedRole.current = true
+          }
+        } else {
+          if (!isCancelled) {
+            setIsPrivileged(false)
           }
         }
       } catch (error) {
-        console.error("Error checking role for recommendation history access:", error)
+        if (!isCancelled) {
+          console.error("Error checking role for recommendation history access:", error)
+          setIsPrivileged(false)
+        }
       } finally {
-        setRoleLoading(false)
+        if (!isCancelled) {
+          setRoleLoading(false)
+        }
       }
     }
 
     checkRole()
-  }, [isLoaded, mounted])
+    
+    // Cleanup function to cancel if component unmounts or dependencies change
+    return () => {
+      isCancelled = true
+    }
+  }, [isLoaded, isSignedIn, mounted, router])
 
   useEffect(() => {
     if (!mounted || !isLoaded || roleLoading) return
@@ -554,6 +622,12 @@ export default function RecommendationHistoryPage() {
     )
   }
 
+  // Admins and moderators can access recommendation history without subscription
+  if (isPrivileged) {
+    return historyContent
+  }
+
+  // Other users must have the required plan
   return (
     <Protect
       plan="groupchat"

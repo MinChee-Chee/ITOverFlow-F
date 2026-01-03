@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useRef } from 'react'
 import CodeEditor from '@/components/sandbox/CodeEditor'
 import PreviewFrame from '@/components/sandbox/PreviewFrame'
 import { Button } from '@/components/ui/button'
@@ -136,6 +136,7 @@ const SandboxPage = () => {
   const [isPrivileged, setIsPrivileged] = useState(false) // admin or moderator
   const [roleLoading, setRoleLoading] = useState(true)
   const { isLoaded, isSignedIn } = useUser()
+  const hasCheckedRole = useRef(false)
 
   const currentLanguage = getLanguageById(selectedLanguageId) || SUPPORTED_LANGUAGES[0]
 
@@ -148,24 +149,79 @@ const SandboxPage = () => {
 
   // Check if user is admin or moderator to bypass subscription requirement
   useEffect(() => {
+    // Wait for Clerk to be ready
+    if (!isLoaded) return
+
+    // Reset ref on mount to ensure fresh checks on navigation
+    hasCheckedRole.current = false
+
+    // Handle unauthenticated users
+    if (!isSignedIn) {
+      setRoleLoading(false)
+      setIsPrivileged(false)
+      return
+    }
+
+    // Reset and check role on each mount/navigation
+    // This ensures fresh checks when navigating between pages
+    setIsPrivileged(false)
+    setRoleLoading(true)
+
+    let isCancelled = false
     const checkRole = async () => {
       try {
-        const response = await fetch('/api/auth/check-role')
+        const response = await fetch('/api/auth/check-role', {
+          cache: 'no-store',
+          headers: {
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache',
+          }
+        })
+        
+        // Check if cancelled before processing
+        if (isCancelled) return
+        
+        // Check if response is JSON before parsing
+        const contentType = response.headers.get('content-type')
+        if (!contentType || !contentType.includes('application/json')) {
+          console.warn("Received non-JSON response from /api/auth/check-role:", contentType)
+          if (!isCancelled) {
+            setIsPrivileged(false)
+            setRoleLoading(false)
+          }
+          return
+        }
+        
         if (response.ok) {
           const data = await response.json()
-          if (data.isModerator || data.isAdmin) {
-            setIsPrivileged(true)
+          if (!isCancelled) {
+            setIsPrivileged(data.isModerator === true || data.isAdmin === true)
+            hasCheckedRole.current = true
+          }
+        } else {
+          if (!isCancelled) {
+            setIsPrivileged(false)
           }
         }
       } catch (error) {
-        console.error('Error checking role for sandbox access:', error)
+        if (!isCancelled) {
+          console.error('Error checking role for sandbox access:', error)
+          setIsPrivileged(false)
+        }
       } finally {
-        setRoleLoading(false)
+        if (!isCancelled) {
+          setRoleLoading(false)
+        }
       }
     }
 
     checkRole()
-  }, [])
+    
+    // Cleanup function to cancel if component unmounts or dependencies change
+    return () => {
+      isCancelled = true
+    }
+  }, [isLoaded, isSignedIn])
 
   const handleLanguageChange = (languageId: string) => {
     setSelectedLanguageId(languageId)
