@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo, memo, useRef } from 'react';
 import { useUser } from '@clerk/nextjs';
+import { useRouter } from 'next/navigation';
 import ChatGroupList from '@/components/chat/ChatGroupList';
 import ChatInterface from '@/components/chat/ChatInterface';
 import { Protect } from '@clerk/nextjs'
@@ -99,10 +100,12 @@ ModeratorChatContent.displayName = 'ModeratorChatContent';
 
 function ChatPage() {
   const { user, isLoaded } = useUser();
+  const router = useRouter();
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
   const [isModerator, setIsModerator] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const hasCheckedRole = useRef(false);
+  const hasRedirected = useRef(false);
 
   // Memoize the role check to prevent multiple calls
   useEffect(() => {
@@ -147,17 +150,22 @@ function ChatPage() {
     </div>
   ), []);
 
+  // Redirect unauthenticated users to sign in
+  useEffect(() => {
+    if (isLoaded && !user && !hasRedirected.current) {
+      hasRedirected.current = true;
+      router.replace('/sign-in');
+    }
+  }, [isLoaded, user, router]);
+
   // Prevent hydration mismatch by not rendering until client-side is ready
   if (!isLoaded || isLoading) {
     return null;
   }
 
+  // Show nothing while redirecting
   if (!user) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <p className="text-muted-foreground">Please sign in to access chat</p>
-      </div>
-    );
+    return null;
   }
 
   // If user is moderator or admin, allow access without subscription
