@@ -12,6 +12,8 @@ import Pagination from '@/components/shared/Pagination'
 import Filter from '@/components/shared/Filter'
 import NoResult from '@/components/shared/NoResult'
 import { DeleteUserButton } from './DeleteUserButton'
+import { LockUserButton } from './LockUserButton'
+import { BanUserButton } from './BanUserButton'
 
 export default async function AdminDashboard(params: {
   searchParams: Promise<{ search?: string; page?: string; filter?: string }>
@@ -125,6 +127,12 @@ export default async function AdminDashboard(params: {
                 const userRole = clerkUser
                   ? ((clerkUser.publicMetadata?.role as string) || 'No role')
                   : 'No role'
+                const isLocked = clerkUser
+                  ? (clerkUser.publicMetadata?.locked as boolean) || false
+                  : false
+                const isBanned = clerkUser
+                  ? (clerkUser.publicMetadata?.banned as boolean) || clerkUser.banned || false
+                  : false
 
                 return (
                   <div
@@ -194,6 +202,16 @@ export default async function AdminDashboard(params: {
                               {user.reputation || 0}
                             </Badge>
                           </div>
+                          {isLocked && (
+                            <Badge variant="destructive" className="bg-red-500">
+                              Locked
+                            </Badge>
+                          )}
+                          {isBanned && (
+                            <Badge variant="destructive" className="bg-red-600">
+                              Banned
+                            </Badge>
+                          )}
                           {user.location && (
                             <div className="flex items-center gap-1">
                               <Image
@@ -218,20 +236,7 @@ export default async function AdminDashboard(params: {
 
                       <div className="flex flex-col gap-2 sm:min-w-[200px]">
                         <div className="flex flex-wrap gap-2">
-                          {/* Role buttons work with clerkId even if clerkUser wasn't fetched */}
-                          <form action={setRole} className="flex-1">
-                            <input type="hidden" value={user.clerkId} name="id" />
-                            <input type="hidden" value="admin" name="role" />
-                            <Button
-                              type="submit"
-                              variant="default"
-                              size="sm"
-                              className="w-full"
-                              disabled={userRole === 'admin'}
-                            >
-                              Make Admin
-                            </Button>
-                          </form>
+                          
 
                           <form action={setRole} className="flex-1">
                             <input type="hidden" value={user.clerkId} name="id" />
@@ -260,8 +265,17 @@ export default async function AdminDashboard(params: {
                             </Button>
                           </form>
                         </div>
-                        <div className="flex gap-2">
-                          <EditUserDialog user={user} />
+                        <div className="flex flex-wrap gap-2">
+                          <LockUserButton 
+                            clerkId={user.clerkId} 
+                            userName={user.name} 
+                            isLocked={isLocked}
+                          />
+                          <BanUserButton 
+                            clerkId={user.clerkId} 
+                            userName={user.name} 
+                            isBanned={isBanned}
+                          />
                           <DeleteUserButton clerkId={user.clerkId} userName={user.name} />
                         </div>
                       </div>

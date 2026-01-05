@@ -4,10 +4,12 @@ import Filter from './Filter';
 import { AnswerFilters } from '@/constants/filters';
 import Link from 'next/link';
 import Image from 'next/image';
-import ParseHTML from './ParseHTML';
+import ExpandableAnswer from './ExpandableAnswer';
 import Votes from './Votes';
 import Pagination from './Pagination';
 import ClientTimestamp from './ClientTimestamp';
+import CommentsSection from './CommentsSection';
+import ReportButton from './ReportButton';
 
 interface Props {
     questionId: string;
@@ -17,8 +19,19 @@ interface Props {
     filter?: string;
 }
 
+// Helper function to safely convert unknown ID to string
+const getIdString = (id: unknown): string => {
+  if (id === null || id === undefined) return '';
+  if (typeof id === 'string') return id;
+  if (typeof id === 'object' && '_id' in id) return String((id as any)._id);
+  return String(id);
+};
+
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const AllAnswers = async ({questionId, userId, totalAnswers, page, filter} :Props) => {
+    // Ensure userId is always a string (handle ObjectId edge cases)
+    const userIdString = userId ? (typeof userId === 'string' ? userId : String(userId)) : "";
+    
     const answer = await getAnswers({
         questionId,
         page: page ? +page : 1,
@@ -33,8 +46,10 @@ const AllAnswers = async ({questionId, userId, totalAnswers, page, filter} :Prop
         </div>
         
         <div>
-            {answer.answers.map((answer) => (
-                <article key={answer._id}
+            {answer.answers.map((answer) => {
+                const answerId = getIdString(answer._id);
+                return (
+                <article key={answerId}
                 className='light-border border-b py-10'>
                     <div className="flex items-center justify-between">
                         <div>
@@ -62,19 +77,35 @@ const AllAnswers = async ({questionId, userId, totalAnswers, page, filter} :Prop
 
                             </div>
                         </div>
-                        <Votes
-                            type="Answer"
-                            itemId={JSON.stringify(answer._id)}
-                            userId={userId ? JSON.stringify(userId): ""}
-                            upvotes={answer.upvotes.length}
-                            hasupVoted={userId ? answer.upvotes.includes(userId): false}
-                            downvotes={answer.downvotes.length}
-                            hasdownVoted={userId ? answer.downvotes.includes(userId): false}
-                        />
+                        <div className="flex items-center gap-2">
+                            <Votes
+                                type="Answer"
+                                itemId={JSON.stringify(answerId)}
+                                userId={userIdString ? JSON.stringify(userIdString): ""}
+                                upvotes={answer.upvotes.length}
+                                hasupVoted={userIdString ? answer.upvotes.some((id: any) => id.toString() === userIdString): false}
+                                downvotes={answer.downvotes.length}
+                                hasdownVoted={userIdString ? answer.downvotes.some((id: any) => id.toString() === userIdString): false}
+                            />
+                            {userIdString && (
+                                <ReportButton
+                                    type="answer"
+                                    answerId={answerId}
+                                    userId={userIdString}
+                                />
+                            )}
+                        </div>
                     </div>
-                    <ParseHTML data={answer.content}/>
+                    <div className="mt-4">
+                      <ExpandableAnswer content={answer.content} />
+                    </div>
+                    <CommentsSection 
+                        answerId={answerId} 
+                        currentUserId={userIdString || undefined}
+                    />
                 </article>
-            ))}
+            );
+            })}
         </div>
 
         <div className="mt-9 w-full">

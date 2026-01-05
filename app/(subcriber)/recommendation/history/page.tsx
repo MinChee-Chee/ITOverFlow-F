@@ -6,7 +6,7 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { FaHistory, FaRobot, FaUser, FaCopy, FaEye, FaComment, FaArrowUp, FaSpinner } from "react-icons/fa"
 import { IoMdArrowBack, IoMdRefresh } from "react-icons/io"
-import { formatAndDivideNumber, getDeviconClassName } from "@/lib/utils"
+import { formatAndDivideNumber, getDeviconClassName, calculateSimilarityFromDistance } from "@/lib/utils"
 import { useRouter } from "next/navigation"
 import ClientTimestamp from "@/components/shared/ClientTimestamp"
 
@@ -51,15 +51,27 @@ export default function RecommendationHistoryPage() {
   const { isLoaded, isSignedIn } = useUser()
   const router = useRouter()
   const hasRedirected = useRef(false)
+  const hasCheckedRole = useRef(false)
 
   const fetchHistory = useCallback(async () => {
     setIsLoadingHistory(true)
     setHistoryError(null)
     try {
-      const res = await fetch("/api/recommendation/history?limit=500")
+      const res = await fetch("/api/recommendation/history?limit=500", {
+        cache: 'no-store', // Ensure fresh data
+      })
+      
+      // Check if response is JSON before parsing
+      const contentType = res.headers.get('content-type')
+      if (!contentType || !contentType.includes('application/json')) {
+        const text = await res.text().catch(() => '')
+        console.error("Received non-JSON response from /api/recommendation/history:", contentType, text.substring(0, 200))
+        throw new Error(`Server returned ${contentType || 'non-JSON'} response. Please try again.`)
+      }
+      
       if (!res.ok) {
         const data = await res.json().catch(() => ({}))
-        throw new Error(data.error || "Failed to fetch history")
+        throw new Error(data.error || `Failed to fetch history (${res.status})`)
       }
       const data = await res.json()
       if (!Array.isArray(data)) {
@@ -100,13 +112,28 @@ export default function RecommendationHistoryPage() {
           
           const batchPromises = batches.map(async (batch) => {
             try {
+              // Add timeout to prevent hanging requests
+              const controller = new AbortController()
+              const timeoutId = setTimeout(() => controller.abort(), 10000) // 10 second timeout
+              
               const questionRes = await fetch("/api/recommendation/questions", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ ids: batch }),
+                signal: controller.signal,
               })
               
+              clearTimeout(timeoutId)
+              
+              // Check if response is JSON before parsing
+              const questionContentType = questionRes.headers.get('content-type')
+              if (!questionContentType || !questionContentType.includes('application/json')) {
+                console.warn(`Received non-JSON response from /api/recommendation/questions: ${questionContentType}`)
+                return []
+              }
+              
               if (!questionRes.ok) {
+                console.warn(`Failed to fetch question batch: ${questionRes.status}`)
                 return []
               }
 
@@ -114,7 +141,11 @@ export default function RecommendationHistoryPage() {
               const { questions } = responseData || {}
               return Array.isArray(questions) ? questions : []
             } catch (err) {
-              console.warn("Failed to fetch question batch:", err)
+              if (err instanceof Error && err.name === 'AbortError') {
+                console.warn("Question batch fetch timed out")
+              } else {
+                console.warn("Failed to fetch question batch:", err)
+              }
             }
             return []
           })
@@ -209,44 +240,96 @@ export default function RecommendationHistoryPage() {
 
   useEffect(() => {
     setMounted(true)
+    // Reset refs on mount to ensure fresh checks on navigation
+    hasCheckedRole.current = false
+    hasRedirected.current = false
   }, [])
 
+  // Handle authentication and role checking in a single, stable flow
   useEffect(() => {
-    if (!mounted || !isLoaded || hasRedirected.current) return
-    if (!isSignedIn) {
-      hasRedirected.current = true
-      router.replace("/sign-in")
-    }
-  }, [isLoaded, isSignedIn, mounted, router])
-
-  useEffect(() => {
+    // Wait for mount and Clerk to be ready
     if (!mounted || !isLoaded) return
 
+    // Handle unauthenticated users
+    if (!isSignedIn) {
+      if (!hasRedirected.current) {
+        hasRedirected.current = true
+        router.replace("/sign-in")
+      }
+      setRoleLoading(false)
+      setIsPrivileged(false)
+      return
+    }
+
+    // Reset and check role on each mount/navigation
+    // This ensures fresh checks when navigating between pages
+    hasCheckedRole.current = false
+    setIsPrivileged(false)
+    setRoleLoading(true)
+
+    // Check role for privileged access
+    let isCancelled = false
     const checkRole = async () => {
       try {
-        const response = await fetch("/api/auth/check-role")
+        const response = await fetch("/api/auth/check-role", {
+          cache: 'no-store',
+          headers: {
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache',
+          }
+        })
+        
+        // Check if cancelled before processing
+        if (isCancelled) return
+        
+        // Check if response is JSON before parsing
+        const contentType = response.headers.get('content-type')
+        if (!contentType || !contentType.includes('application/json')) {
+          console.warn("Received non-JSON response from /api/auth/check-role:", contentType)
+          if (!isCancelled) {
+            setIsPrivileged(false)
+            setRoleLoading(false)
+          }
+          return
+        }
+        
         if (response.ok) {
           const data = await response.json()
-          if (data.isModerator || data.isAdmin) {
-            setIsPrivileged(true)
+          if (!isCancelled) {
+            setIsPrivileged(data.isModerator === true || data.isAdmin === true)
+            hasCheckedRole.current = true
+          }
+        } else {
+          if (!isCancelled) {
+            setIsPrivileged(false)
           }
         }
       } catch (error) {
-        console.error("Error checking role for recommendation history access:", error)
+        if (!isCancelled) {
+          console.error("Error checking role for recommendation history access:", error)
+          setIsPrivileged(false)
+        }
       } finally {
-        setRoleLoading(false)
+        if (!isCancelled) {
+          setRoleLoading(false)
+        }
       }
     }
 
     checkRole()
-  }, [isLoaded, mounted])
+    
+    // Cleanup function to cancel if component unmounts or dependencies change
+    return () => {
+      isCancelled = true
+    }
+  }, [isLoaded, isSignedIn, mounted, router])
 
   useEffect(() => {
     if (!mounted || !isLoaded || roleLoading) return
-    // Require both a signed-in user and privileged role before fetching history
-    if (!isPrivileged || !isSignedIn) return
+    // Require signed-in user to fetch history (all users can see their own history)
+    if (!isSignedIn) return
     fetchHistory()
-  }, [fetchHistory, isLoaded, isPrivileged, isSignedIn, mounted, roleLoading])
+  }, [fetchHistory, isLoaded, isSignedIn, mounted, roleLoading])
 
   if (!mounted || !isLoaded || roleLoading) {
     return null
@@ -358,21 +441,17 @@ export default function RecommendationHistoryPage() {
                     
                     const contentPreview = metadata.content || ""
                     
-                    // Calculate similarity percentage
+                    // Calculate similarity percentage using improved algorithm
                     const distance = results.distances?.[idx]
-                    let similarity: number | null = null
+                    const similarity = calculateSimilarityFromDistance(
+                      distance,
+                      results.distances
+                    )
                     
-                    if (distance !== undefined && distance !== null && !isNaN(distance)) {
-                      if (distance < 0) {
-                        similarity = Math.max(0, Math.min(100, (1 + distance) * 100))
-                      } else {
-                        if (distance <= 2) {
-                          similarity = Math.max(0, Math.min(100, (1 - distance / 2) * 100))
-                        } else {
-                          similarity = Math.max(0, Math.min(100, 100 * Math.exp(-distance / 2)))
-                        }
-                      }
-                    }
+                    // Round to 1 decimal place for display
+                    const displaySimilarity = similarity !== null 
+                      ? Math.round(similarity * 10) / 10 
+                      : null
                     
                     const questionHref = `/question/${id}`
                     const getQuestionUrl = () =>
@@ -392,18 +471,18 @@ export default function RecommendationHistoryPage() {
                             {title.replace(/&#39;/g, "'").replace(/&quot;/g, '"').replace(/&amp;/g, '&')}
                           </h4>
                           <div className="flex items-center gap-2 flex-shrink-0 self-start" onClick={(e) => e.stopPropagation()}>
-                            {similarity !== null && (
+                            {displaySimilarity !== null && (
                               <span
                                 className={`text-[10px] font-bold px-2.5 py-1 rounded-full shadow-sm min-w-[2.75rem] text-center h-fit ${
-                                  similarity >= 80
+                                  displaySimilarity >= 80
                                     ? 'bg-green-500 text-white shadow-green-500/20'
-                                    : similarity >= 60
+                                    : displaySimilarity >= 60
                                     ? 'bg-blue-500 text-white shadow-blue-500/20'
                                     : 'bg-gray-500 text-white shadow-gray-500/20'
                                 }`}
-                                title={`Similarity: ${similarity.toFixed(1)}%`}
+                                title={`Similarity: ${displaySimilarity.toFixed(1)}%`}
                               >
-                                {similarity.toFixed(0)}%
+                                {displaySimilarity.toFixed(0)}%
                               </span>
                             )}
                             <button
@@ -520,10 +599,31 @@ export default function RecommendationHistoryPage() {
     </div>
   )
 
+  // Show history content for all signed-in users
+  // The Protect component below handles premium access if needed
+  if (!isSignedIn) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-6">
+        <div className="w-20 h-20 rounded-full bg-primary-500/10 flex items-center justify-center mb-4">
+          <FaHistory className="h-10 w-10 text-primary-500" />
+        </div>
+        <h1 className="h2-bold text-dark100_light900 mb-3">Sign in to view history</h1>
+        <p className="text-dark500_light700 max-w-md mb-6">
+          Please sign in to view your recommendation history.
+        </p>
+        <Link href="/sign-in">
+          <Button className="bg-primary-500 hover:bg-primary-400 px-6">Sign in</Button>
+        </Link>
+      </div>
+    )
+  }
+
+  // Admins and moderators can access recommendation history without subscription
   if (isPrivileged) {
     return historyContent
   }
 
+  // Other users must have the required plan
   return (
     <Protect
       plan="groupchat"
@@ -540,11 +640,6 @@ export default function RecommendationHistoryPage() {
             <Link href="/pricing">
               <Button className="bg-primary-500 hover:bg-primary-400 px-6">View pricing</Button>
             </Link>
-            {!isSignedIn && (
-              <Link href="/sign-in">
-                <Button variant="outline" className="px-6">Sign in</Button>
-              </Link>
-            )}
           </div>
         </div>
       }

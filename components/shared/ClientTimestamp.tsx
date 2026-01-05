@@ -14,6 +14,7 @@ type Props = {
  */
 const ClientTimestamp = ({ createdAt, prefix = "", className }: Props) => {
   const [text, setText] = useState<string>("")
+  const [isMounted, setIsMounted] = useState(false)
 
   // Normalize to a stable primitive so Date instances don't retrigger the effect unnecessarily
   const createdKey = useMemo(() => {
@@ -22,6 +23,7 @@ const ClientTimestamp = ({ createdAt, prefix = "", className }: Props) => {
   }, [createdAt])
 
   useEffect(() => {
+    setIsMounted(true)
     if (!createdKey) {
       setText("")
       return
@@ -32,9 +34,17 @@ const ClientTimestamp = ({ createdAt, prefix = "", className }: Props) => {
     setText(value)
   }, [createdKey, prefix])
 
-  if (!text) return null
+  // Render a consistent placeholder on server to avoid hydration mismatch
+  // Use suppressHydrationWarning to prevent React warnings during hydration
+  if (!isMounted || !text) {
+    return (
+      <span className={className} suppressHydrationWarning>
+        {prefix}
+      </span>
+    )
+  }
 
-  return <span className={className}>{text}</span>
+  return <span className={className} suppressHydrationWarning>{text}</span>
 }
 
 export default ClientTimestamp

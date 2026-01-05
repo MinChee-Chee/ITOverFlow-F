@@ -76,26 +76,95 @@ export default function ChatInterface({ chatGroupId }: ChatInterfaceProps) {
 
   const setupPusher = () => {
     const pusherKey = process.env.NEXT_PUBLIC_PUSHER_KEY;
-    const pusherCluster = process.env.NEXT_PUBLIC_PUSHER_CLUSTER;
+    const pusherCluster = process.env.NEXT_PUBLIC_PUSHER_CLUSTER || 'ap1';
     
     if (!pusherKey) {
-      console.warn('Pusher key not configured. Real-time updates will not work.');
+      console.warn('[Channels Client] Pusher key not configured. Real-time updates will not work.');
       return;
     }
 
+    const channelName = `chat-group-${chatGroupId}`;
+    console.info('[Channels Client] Setting up connection:', {
+      channel: channelName,
+      cluster: pusherCluster,
+      timestamp: new Date().toISOString(),
+    });
+
     try {
       const pusher = new Pusher(pusherKey, {
-        cluster: pusherCluster || 'us2',
+        cluster: pusherCluster,
         authEndpoint: '/api/pusher/auth',
+        enabledTransports: ['ws', 'wss'],
       });
 
-      const channel = pusher.subscribe(`chat-group-${chatGroupId}`);
-      
+      // Connection state diagnostics
+      pusher.connection.bind('connected', () => {
+        console.info('[Channels Client] Connection established:', {
+          socketId: pusher.connection.socket_id,
+          timestamp: new Date().toISOString(),
+        });
+      });
+
+      pusher.connection.bind('disconnected', () => {
+        console.warn('[Channels Client] Connection disconnected:', {
+          timestamp: new Date().toISOString(),
+        });
+      });
+
+      pusher.connection.bind('error', (error: any) => {
+        console.error('[Channels Client] Connection error:', {
+          error: error?.message || error,
+          timestamp: new Date().toISOString(),
+        });
+      });
+
+      pusher.connection.bind('state_change', (states: { previous: string; current: string }) => {
+        console.info('[Channels Client] Connection state changed:', {
+          from: states.previous,
+          to: states.current,
+          timestamp: new Date().toISOString(),
+        });
+      });
+
+      const channel = pusher.subscribe(channelName);
+
+      // Subscription event diagnostics
+      channel.bind('pusher:subscription_succeeded', () => {
+        console.info('[Channels Client] Subscription succeeded:', {
+          channel: channelName,
+          timestamp: new Date().toISOString(),
+        });
+      });
+
+      channel.bind('pusher:subscription_error', (error: any) => {
+        console.error('[Channels Client] Subscription error:', {
+          channel: channelName,
+          error: error?.message || error,
+          status: error?.status,
+          timestamp: new Date().toISOString(),
+        });
+        toast({
+          title: 'Connection Error',
+          description: 'Failed to subscribe to chat channel. Please refresh.',
+          variant: 'destructive',
+        });
+      });
+
+      // Message event handler
       channel.bind('new-message', (data: { message: Message }) => {
+        console.info('[Channels Client] Received message:', {
+          channel: channelName,
+          messageId: data.message._id,
+          timestamp: new Date().toISOString(),
+        });
+
         setMessages((prev) => {
           // Avoid duplicates by checking if message already exists
           const exists = prev.some(m => m._id === data.message._id);
           if (exists) {
+            console.warn('[Channels Client] Duplicate message detected, ignoring:', {
+              messageId: data.message._id,
+            });
             return prev;
           }
           // Add new message and sort by createdAt to maintain order
@@ -113,7 +182,16 @@ export default function ChatInterface({ chatGroupId }: ChatInterfaceProps) {
       pusherRef.current = pusher;
       channelRef.current = channel;
     } catch (error) {
-      console.error('Error setting up Pusher:', error);
+      console.error('[Channels Client] Setup error:', {
+        error: error instanceof Error ? error.message : String(error),
+        channel: channelName,
+        timestamp: new Date().toISOString(),
+      });
+      toast({
+        title: 'Connection Error',
+        description: 'Failed to connect to real-time chat. Please refresh.',
+        variant: 'destructive',
+      });
     }
   };
 

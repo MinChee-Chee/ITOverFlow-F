@@ -19,21 +19,24 @@ export const metadata: Metadata = {
   description: "Dev Overflow is a community of developers, engineers, and future engineers who are passionate about learning and sharing knowledge.",
 }
 
+// Enable partial prerendering for better performance
 export const dynamic = 'force-dynamic';
+export const revalidate = 60; // Revalidate every 60 seconds for semi-static content
 
-export default async function Home({searchParams}: SearchParamsProps) {
+// Separate component for questions list to enable streaming
+async function QuestionsList({ searchParams }: SearchParamsProps) {
   const resolvedSearchParams = await searchParams;
   const { userId } = await auth();
 
   let result;
 
-  if(resolvedSearchParams?.filter === 'recommended') {
-    if(userId) {
+  if (resolvedSearchParams?.filter === 'recommended') {
+    if (userId) {
       result = await getRecommendedQuestions({
         userId,
         searchQuery: resolvedSearchParams.q,
         page: resolvedSearchParams.page ? +resolvedSearchParams.page : 1,
-      }); 
+      });
     } else {
       result = {
         questions: [],
@@ -45,10 +48,44 @@ export default async function Home({searchParams}: SearchParamsProps) {
       searchQuery: resolvedSearchParams.q,
       filter: resolvedSearchParams.filter,
       page: resolvedSearchParams.page ? +resolvedSearchParams.page : 1,
-    }); 
+    });
   }
 
+  return (
+    <>
+      <div className="mt-10 flex w-full flex-col gap-6">
+        {result.questions.length > 0 ?
+          result.questions.map((question: any) => (
+            <QuestionCard
+              key={question._id}
+              _id={question._id}
+              title={question.title}
+              tags={question.tags}
+              author={question.author}
+              upvotes={question.upvotes}
+              views={question.views}
+              answers={question.answers}
+              createdAt={question.createdAt}
+            />
+          ))
+          : <NoResult
+            title="There's no question to show"
+            description="Be the first to break the silence! 🚀 Ask a Question and kickstart the discussion. our query could be the next big thing others learn from. Get involved! 💡"
+            link="/ask-question"
+            linkTitle="Ask a Question"
+          />}
+      </div>
+      <div className="mt-9">
+        <Pagination
+          pageNumber={resolvedSearchParams?.page ? +resolvedSearchParams.page : 1}
+          isNext={result.isNext}
+        />
+      </div>
+    </>
+  );
+}
 
+export default async function Home({ searchParams }: SearchParamsProps) {
   return (
     <>
       <div className="flex w-full flex-col-reverse justify-between gap-4 sm:flex-row sm:items-center">
@@ -85,36 +122,15 @@ export default async function Home({searchParams}: SearchParamsProps) {
         <HomeFilters />
       </Suspense>
 
-      <div className="mt-10 flex w-full flex-col gap-6">
-        {result.questions.length > 0 ?
-          result.questions.map((question) => (
-            <QuestionCard 
-              key={question._id}
-              _id={question._id}
-              title={question.title}
-              tags={question.tags}
-              author={question.author}
-              upvotes={question.upvotes}
-              views={question.views}
-              answers={question.answers}
-              createdAt={question.createdAt}
-            />
-          ))
-          : <NoResult 
-            title="There’s no question to show"
-            description="Be the first to break the silence! 🚀 Ask a Question and kickstart the discussion. our query could be the next big thing others learn from. Get involved! 💡"
-            link="/ask-question"
-            linkTitle="Ask a Question"
-          />}
-      </div>
-      <div className="mt-9">
-      <Suspense fallback={<div className="h-10 animate-pulse bg-light-800 dark:bg-dark-300 rounded-md" />}>
-        <Pagination
-          pageNumber = {resolvedSearchParams?.page ? +resolvedSearchParams.page : 1}
-          isNext = {result.isNext}
-        />
+      <Suspense fallback={
+        <div className="mt-10 flex w-full flex-col gap-6">
+          {[1, 2, 3, 4, 5].map((i) => (
+            <div key={i} className="h-32 animate-pulse bg-light-800 dark:bg-dark-300 rounded-lg" />
+          ))}
+        </div>
+      }>
+        <QuestionsList searchParams={searchParams} />
       </Suspense>
-      </div>
     </>
   )
 }

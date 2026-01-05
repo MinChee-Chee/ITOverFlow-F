@@ -173,11 +173,101 @@ export const fetcher = async (url: string) => {
   const res = await fetch(url);
   
   if (!res.ok) {
-    const error = new Error('An error occurred while fetching the data.');
+    // Try to get error message from JSON response
+    const contentType = res.headers.get('content-type');
+    let errorMessage = 'An error occurred while fetching the data.';
+    
+    if (contentType && contentType.includes('application/json')) {
+      try {
+        const errorData = await res.json();
+        errorMessage = errorData.error || errorData.message || errorMessage;
+      } catch {
+        // If JSON parsing fails, use default message
+      }
+    } else {
+      // If response is HTML, try to get text for debugging
+      try {
+        const text = await res.text();
+        // Log HTML responses for debugging (usually error pages)
+        if (text.includes('<!DOCTYPE') || text.includes('<html')) {
+          console.error(`Received HTML instead of JSON from ${url}. Status: ${res.status}`);
+        }
+      } catch {
+        // Ignore errors when reading text
+      }
+    }
+    
+    const error = new Error(errorMessage);
     // Attach extra info to the error object
     (error as any).status = res.status;
     throw error;
   }
   
+  // Check if response is actually JSON before parsing
+  const contentType = res.headers.get('content-type');
+  if (!contentType || !contentType.includes('application/json')) {
+    const text = await res.text();
+    // If we got HTML, log it for debugging
+    if (text.includes('<!DOCTYPE') || text.includes('<html')) {
+      console.error(`Received HTML instead of JSON from ${url}. Response preview:`, text.substring(0, 200));
+      throw new Error(`Expected JSON but received HTML from ${url}. This usually means the API route returned an error page.`);
+    }
+    throw new Error(`Expected JSON response but got ${contentType || 'unknown content type'} from ${url}`);
+  }
+  
   return res.json();
 }
+
+/**
+ * Calculate similarity score from distance (client-side fallback)
+ * This matches the backend calculation for consistency
+ * 
+ * @param distance - The distance value from ChromaDB
+ * @param allDistances - Optional array of all distances for normalization
+ * @returns Similarity score from 0-100, or null if invalid
+ */
+export const calculateSimilarityFromDistance = (
+  distance: number | null | undefined,
+  allDistances?: number[]
+): number | null => {
+  if (distance === null || distance === undefined || isNaN(distance) || !isFinite(distance)) {
+    return null;
+  }
+
+  // If we have all distances, use normalized approach
+  if (allDistances && allDistances.length > 0) {
+    const validDistances = allDistances.filter(d => d !== null && d !== undefined && !isNaN(d) && isFinite(d));
+    if (validDistances.length > 0) {
+      const minDistance = Math.min(...validDistances);
+      const maxDistance = Math.max(...validDistances);
+      const isLikelyCosine = maxDistance <= 2.5;
+
+      if (isLikelyCosine) {
+        // Cosine distance: similarity = (1 - distance) * 100, normalized
+        const baseSimilarity = Math.max(0, 1 - distance);
+        const normalizedSimilarity = minDistance === 0 
+          ? baseSimilarity 
+          : baseSimilarity / (1 - minDistance);
+        return Math.min(100, Math.max(0, normalizedSimilarity * 100));
+      } else {
+        // L2/Euclidean distance: use exponential decay
+        const normalizedDistance = minDistance === 0 
+          ? distance 
+          : (distance - minDistance) / (maxDistance - minDistance + 0.001);
+        const similarity = Math.exp(-normalizedDistance * 2) * 100;
+        return Math.min(100, Math.max(0, similarity));
+      }
+    }
+  }
+
+  // Fallback: simple calculation without normalization
+  if (distance < 0) {
+    return Math.max(0, Math.min(100, (1 + distance) * 100));
+  } else if (distance <= 2) {
+    // Likely cosine distance
+    return Math.max(0, Math.min(100, (1 - distance) * 100));
+  } else {
+    // Likely L2 distance - use exponential decay
+    return Math.max(0, Math.min(100, 100 * Math.exp(-distance / 2)));
+  }
+};

@@ -57,13 +57,26 @@ async function embedQuery(text: string) {
 
 export async function POST(req: Request) {
   try {
+    // Get clerkId early to ensure auth context is available
+    const { userId: clerkId } = await auth();
+    
     const body = await req.json();
     const query = (body?.query as string | undefined)?.trim();
     const topK = Number(body?.topK ?? 5);
     const collectionName = process.env.CHROMA_COLLECTION || "questions";
 
-    if (!query) {
+    // Validate query
+    if (!query || query.length === 0) {
       return NextResponse.json({ error: "Query is required" }, { status: 400 });
+    }
+    
+    if (query.length > 1000) {
+      return NextResponse.json({ error: "Query is too long. Maximum length is 1000 characters." }, { status: 400 });
+    }
+    
+    // Validate topK
+    if (isNaN(topK) || topK < 1 || topK > 20) {
+      return NextResponse.json({ error: "topK must be a number between 1 and 20" }, { status: 400 });
     }
 
     const client = getClient();
@@ -108,9 +121,79 @@ export async function POST(req: Request) {
     const metadatas: any[] = Array.isArray(results.metadatas) && Array.isArray(results.metadatas[0]) ? results.metadatas[0] : [];
     
     const rawDistances = Array.isArray(results.distances) && Array.isArray(results.distances[0]) ? results.distances[0] : [];
-    const distances: number[] = rawDistances.filter((dist): dist is number => dist !== null && dist !== undefined && typeof dist === 'number');
+    const distances: number[] = rawDistances.filter((dist): dist is number => dist !== null && dist !== undefined && typeof dist === 'number' && !isNaN(dist));
 
     console.log(`ChromaDB returned ${ids.length} results for query: "${query}"`);
+
+    /**
+     * Improved similarity score calculation
+     * Handles both cosine distance and L2/Euclidean distance
+     * Uses normalized scoring relative to the best match
+     */
+    function calculateSimilarityScores(distances: number[]): number[] {
+      if (!distances || distances.length === 0) {
+        return [];
+      }
+
+      // Filter out invalid distances
+      const validDistances = distances.filter(d => d !== null && d !== undefined && !isNaN(d) && isFinite(d));
+      
+      if (validDistances.length === 0) {
+        return distances.map(() => 0);
+      }
+
+      // Find minimum distance (best match)
+      const minDistance = Math.min(...validDistances);
+      const maxDistance = Math.max(...validDistances);
+      
+      // Detect distance metric type based on value range
+      // Cosine distance typically ranges 0-2 (where 0 = identical, 2 = opposite)
+      // L2/Euclidean distance can be much larger
+      const isLikelyCosine = maxDistance <= 2.5;
+      
+      // Calculate similarity scores
+      const similarities = validDistances.map((distance) => {
+        if (isLikelyCosine) {
+          // Cosine distance: distance = 1 - cosine_similarity
+          // For normalized embeddings, cosine similarity ranges -1 to 1
+          // So distance ranges 0 to 2, where 0 = identical
+          // Convert to similarity: similarity = (1 - distance) * 100
+          // But we normalize relative to the best match for better distribution
+          const baseSimilarity = Math.max(0, 1 - distance);
+          const normalizedSimilarity = minDistance === 0 
+            ? baseSimilarity 
+            : baseSimilarity / (1 - minDistance);
+          return Math.min(100, Math.max(0, normalizedSimilarity * 100));
+        } else {
+          // L2/Euclidean distance: larger distance = less similar
+          // Use inverse relationship with normalization
+          // Formula: similarity = (1 / (1 + normalized_distance)) * 100
+          const normalizedDistance = minDistance === 0 
+            ? distance 
+            : (distance - minDistance) / (maxDistance - minDistance + 0.001); // +0.001 to avoid division by zero
+          
+          // Use exponential decay for smoother distribution
+          const similarity = Math.exp(-normalizedDistance * 2) * 100;
+          return Math.min(100, Math.max(0, similarity));
+        }
+      });
+
+      // Ensure we return the same length as input
+      const result: number[] = [];
+      let simIdx = 0;
+      for (let i = 0; i < distances.length; i++) {
+        if (distances[i] !== null && distances[i] !== undefined && !isNaN(distances[i]) && isFinite(distances[i])) {
+          result.push(similarities[simIdx++]);
+        } else {
+          result.push(0);
+        }
+      }
+      
+      return result;
+    }
+
+    // Calculate similarity scores
+    const similarityScores = calculateSimilarityScores(distances);
 
     // Fetch question titles from MongoDB
     let questionTitles: Record<string, { 
@@ -185,6 +268,7 @@ export async function POST(req: Request) {
           upvotes: 0,
           answers: 0,
           createdAt: null,
+          similarity: 0,
         };
       }
       const questionData = questionTitles[id];
@@ -200,6 +284,7 @@ export async function POST(req: Request) {
         upvotes: questionData?.upvotes ?? existingMeta?.upvotes ?? 0,
         answers: questionData?.answers ?? existingMeta?.answers ?? 0,
         createdAt: questionData?.createdAt || existingMeta?.createdAt || null,
+        similarity: idx < similarityScores.length ? similarityScores[idx] : 0,
       };
     });
 
@@ -208,27 +293,79 @@ export async function POST(req: Request) {
       documents,
       metadatas: enrichedMetadatas,
       distances,
+      similarities: similarityScores,
     };
 
     // Save history asynchronously (non-blocking)
-    (async () => {
+    // Use the clerkId we got earlier to avoid auth context issues
+    if (clerkId && query && Array.isArray(ids) && ids.length > 0) {
+      // Ensure database is connected (it should be from earlier, but ensure it)
       try {
-        const { userId: clerkId } = await auth();
-        if (clerkId) {
-          await connectToDatabase();
-          await RecommendationHistory.create({
-            clerkId,
-            query,
-            topK: Math.min(Math.max(topK, 1), 20),
-            resultIds: ids,
-            distances: distances,
+        await connectToDatabase();
+        
+        // Prepare history data with validation
+        const historyData = {
+          clerkId,
+          query: query.trim().substring(0, 1000), // Limit query length to prevent DB issues
+          topK: Math.min(Math.max(topK, 1), 20),
+          resultIds: ids
+            .filter((id): id is string => id !== null && id !== undefined && typeof id === 'string')
+            .slice(0, 100), // Limit to prevent excessive data
+          distances: Array.isArray(distances) 
+            ? distances
+                .filter((d): d is number => d !== null && d !== undefined && typeof d === 'number' && !isNaN(d))
+                .slice(0, 100) // Match resultIds length
+            : undefined,
+        };
+        
+        // Only save if we have at least a query and valid structure
+        if (historyData.query && historyData.query.length > 0 && Array.isArray(historyData.resultIds) && historyData.resultIds.length > 0) {
+          // Save history in background without blocking the response
+          // Add timeout to prevent hanging promises
+          const savePromise = RecommendationHistory.create(historyData);
+          const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('History save timeout')), 5000)
+          );
+          
+          Promise.race([savePromise, timeoutPromise])
+            .then((savedHistory: any) => {
+              console.log(`✅ Successfully saved recommendation history for clerkId: ${clerkId}, historyId: ${savedHistory?._id}, query: "${historyData.query.substring(0, 50)}", results: ${historyData.resultIds.length}`);
+            })
+            .catch((err) => {
+              // Log error but don't fail the request
+              console.error("❌ Failed to save recommendation history:", err);
+              console.error("Error details:", {
+                clerkId,
+                query: historyData.query.substring(0, 50),
+                resultIdsCount: historyData.resultIds.length,
+                topK: historyData.topK,
+                errorMessage: err instanceof Error ? err.message : String(err),
+                errorStack: err instanceof Error ? err.stack : undefined,
+              });
+            });
+        } else {
+          console.warn("Skipping history save - invalid data structure:", {
+            hasQuery: !!historyData.query,
+            queryLength: historyData.query?.length || 0,
+            resultIdsIsArray: Array.isArray(historyData.resultIds),
+            resultIdsLength: historyData.resultIds?.length || 0,
           });
         }
-      } catch (err) {
-        console.warn("Failed to save recommendation history:", err);
-        // Don't throw - history saving is non-critical
+      } catch (dbErr) {
+        // Log but don't fail the request
+        console.error("Database connection error when saving history:", dbErr);
       }
-    })();
+    } else {
+      if (!clerkId) {
+        console.warn("No clerkId found, skipping history save. User may not be authenticated.");
+      } else if (!query) {
+        console.warn("No query provided, skipping history save.");
+      } else if (!Array.isArray(ids)) {
+        console.warn("Invalid ids format, skipping history save. Expected array, got:", typeof ids);
+      } else if (ids.length === 0) {
+        console.warn("Empty ids array, skipping history save.");
+      }
+    }
 
     return NextResponse.json(response);
   } catch (error) {

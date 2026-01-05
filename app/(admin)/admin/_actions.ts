@@ -93,3 +93,131 @@ export async function deleteUserData(formData: FormData) {
   }
 }
 
+export async function lockUser(formData: FormData) {
+  const client = await clerkClient()
+
+  // Check that the user trying to lock is an admin
+  if (!(await checkRole('admin'))) {
+    return { error: 'Not authorized' }
+  }
+
+  try {
+    const clerkId = formData.get('clerkId') as string
+    const clerkUser = await client.users.getUser(clerkId)
+    
+    // Get existing metadata and preserve it
+    const existingMetadata = clerkUser.publicMetadata || {}
+    
+    await client.users.updateUserMetadata(clerkId, {
+      publicMetadata: { 
+        ...existingMetadata,
+        locked: true 
+      },
+    })
+    
+    revalidatePath('/admin')
+    return { success: true }
+  } catch (err) {
+    console.error('Error locking user:', err)
+    return { error: 'Failed to lock user' }
+  }
+}
+
+export async function unlockUser(formData: FormData) {
+  const client = await clerkClient()
+
+  // Check that the user trying to unlock is an admin
+  if (!(await checkRole('admin'))) {
+    return { error: 'Not authorized' }
+  }
+
+  try {
+    const clerkId = formData.get('clerkId') as string
+    const clerkUser = await client.users.getUser(clerkId)
+    
+    // Get existing metadata and preserve it
+    const existingMetadata = clerkUser.publicMetadata || {}
+    
+    await client.users.updateUserMetadata(clerkId, {
+      publicMetadata: { 
+        ...existingMetadata,
+        locked: false 
+      },
+    })
+    
+    revalidatePath('/admin')
+    return { success: true }
+  } catch (err) {
+    console.error('Error unlocking user:', err)
+    return { error: 'Failed to unlock user' }
+  }
+}
+
+export async function banUser(formData: FormData) {
+  const client = await clerkClient()
+
+  // Check that the user trying to ban is an admin
+  if (!(await checkRole('admin'))) {
+    return { error: 'Not authorized' }
+  }
+
+  try {
+    const clerkId = formData.get('clerkId') as string
+    const clerkUser = await client.users.getUser(clerkId)
+    
+    // Get existing metadata and preserve it
+    const existingMetadata = clerkUser.publicMetadata || {}
+    
+    // Ban the user in Clerk to prevent login
+    await client.users.banUser(clerkId)
+    
+    // Update metadata to track ban status
+    await client.users.updateUserMetadata(clerkId, {
+      publicMetadata: { 
+        ...existingMetadata,
+        banned: true 
+      },
+    })
+    
+    revalidatePath('/admin')
+    return { success: true }
+  } catch (err) {
+    console.error('Error banning user:', err)
+    return { error: 'Failed to ban user' }
+  }
+}
+
+export async function unbanUser(formData: FormData) {
+  const client = await clerkClient()
+
+  // Check that the user trying to unban is an admin
+  if (!(await checkRole('admin'))) {
+    return { error: 'Not authorized' }
+  }
+
+  try {
+    const clerkId = formData.get('clerkId') as string
+    const clerkUser = await client.users.getUser(clerkId)
+    
+    // Get existing metadata and preserve it
+    const existingMetadata = clerkUser.publicMetadata || {}
+    
+    // Unban the user in Clerk to allow login
+    await client.users.unbanUser(clerkId)
+    
+    // Update metadata to track ban status
+    await client.users.updateUserMetadata(clerkId, {
+      publicMetadata: { 
+        ...existingMetadata,
+        banned: false 
+      },
+    })
+    
+    revalidatePath('/admin')
+    return { success: true }
+  } catch (err) {
+    console.error('Error unbanning user:', err)
+    return { error: 'Failed to unban user' }
+  }
+}
+

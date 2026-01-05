@@ -7,16 +7,20 @@ export async function GET() {
     const { userId } = await auth();
     
     if (!userId) {
-      return NextResponse.json({ isModerator: false, isAdmin: false });
+      return NextResponse.json({ isModerator: false, isAdmin: false }, { status: 200 });
     }
 
-    const isModerator = await checkRole('moderator');
-    const isAdmin = await checkRole('admin');
+    // Check both roles in parallel for better performance
+    const [isModerator, isAdmin] = await Promise.all([
+      checkRole('moderator'),
+      checkRole('admin')
+    ]);
 
-    return NextResponse.json({ isModerator, isAdmin });
+    return NextResponse.json({ isModerator, isAdmin }, { status: 200 });
   } catch (error) {
     console.error('Error checking role:', error);
-    return NextResponse.json({ isModerator: false, isAdmin: false });
+    // Return 200 with false values to prevent UI errors, but log the issue
+    return NextResponse.json({ isModerator: false, isAdmin: false }, { status: 200 });
   }
 }
 

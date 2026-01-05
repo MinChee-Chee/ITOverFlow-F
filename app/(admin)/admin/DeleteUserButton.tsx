@@ -55,7 +55,7 @@ export function DeleteUserButton({ clerkId, userName }: DeleteUserButtonProps) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="destructive" size="sm" className="w-full sm:w-auto">
+        <Button variant="outline" size="sm" className="w-full sm:w-auto">
           <Image
             src="/assets/icons/trash.svg"
             alt="Delete"
