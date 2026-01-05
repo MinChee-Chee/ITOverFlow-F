@@ -7,6 +7,7 @@ import { getAllUsers } from '@/lib/actions/user.action'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import Image from 'next/image'
+import Link from 'next/link'
 import { EditUserDialog } from './EditUserDialog'
 import Pagination from '@/components/shared/Pagination'
 import Filter from '@/components/shared/Filter'
@@ -107,11 +108,16 @@ export default async function AdminDashboard(params: {
   return (
     <div className="w-full">
       <div className="flex flex-col gap-4">
-        <div>
-          <h1 className="h1-bold text-dark100_light900">Admin Dashboard</h1>
-          <p className="paragraph-regular text-dark400_light700 mt-3.5">
-            Manage all users, their roles, and permissions. This dashboard is restricted to users with the <span className="font-semibold text-primary-500">admin</span> role.
-          </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="h1-bold text-dark100_light900">Admin Dashboard</h1>
+            <p className="paragraph-regular text-dark400_light700 mt-3.5">
+              Manage all users, their roles, and permissions. This dashboard is restricted to users with the <span className="font-semibold text-primary-500">admin</span> role.
+            </p>
+          </div>
+          <Button asChild variant="outline">
+            <Link href="/admin/support-request">View Support Requests</Link>
+          </Button>
         </div>
 
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">

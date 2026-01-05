@@ -23,7 +23,7 @@ import ParseHTML from './ParseHTML'
 interface ReportCardProps {
   report: {
     _id: string
-    type: 'question' | 'answer' | 'comment'
+    type: 'question' | 'answer' | 'comment' | 'chatMessage'
     reporter: {
       _id: string
       clerkId: string
@@ -80,6 +80,22 @@ interface ReportCardProps {
         }
       }
     } | null
+    chatMessage?: {
+      _id: string
+      content: string
+      createdAt: Date
+      author: {
+        _id: string
+        clerkId: string
+        name: string
+        username: string
+        picture: string
+      }
+      chatGroup?: {
+        _id: string
+        name: string
+      }
+    } | null
     reason: string
     status: 'pending' | 'reviewed' | 'resolved' | 'dismissed'
     reviewedBy?: {
@@ -103,6 +119,7 @@ export default function ReportCard({ report }: ReportCardProps) {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [isUpdating, setIsUpdating] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [isBanning, setIsBanning] = useState(false)
   const [warningReason, setWarningReason] = useState('')
   const [warningMessage, setWarningMessage] = useState('')
   const router = useRouter()
@@ -225,10 +242,72 @@ export default function ReportCard({ report }: ReportCardProps) {
     }
   }
 
+  const handleBanUser = async () => {
+    if (!chatMessage?._id || !chatMessage?.author?._id || !chatMessage?.chatGroup?._id) {
+      toast({
+        title: "Error",
+        description: "Chat message, author, or chat group information is missing.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    try {
+      const chatGroup = chatMessage.chatGroup
+      const chatGroupId = (typeof chatGroup === 'object' && chatGroup && '_id' in chatGroup)
+        ? String(chatGroup._id)
+        : String(chatGroup || '')
+      
+      const authorId = chatMessage.author._id
+      const bannedUserId = (typeof authorId === 'object' && authorId)
+        ? String(authorId)
+        : String(authorId || '')
+
+      setIsBanning(true)
+
+      const response = await fetch('/api/chat/groups/ban', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          chatGroupId,
+          bannedUserId,
+        }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to ban user from chat group')
+      }
+
+      toast({
+        title: "User banned",
+        description: "The user has been banned from the chat group.",
+      })
+
+      // Update report status to resolved
+      await handleStatusUpdate('resolved')
+      router.refresh()
+      setOpen(false)
+    } catch (error) {
+      console.error('Error banning user:', error)
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : 'Failed to ban user from chat group',
+        variant: "destructive",
+      })
+    } finally {
+      setIsBanning(false)
+    }
+  }
+
   // Safely extract content and reporter with null checks
   const question = (report?.question && report.question !== null && typeof report.question === 'object' && report.question._id) ? report.question : null
   const answer = (report?.answer && report.answer !== null && typeof report.answer === 'object' && report.answer._id) ? report.answer : null
   const comment = (report?.comment && report.comment !== null && typeof report.comment === 'object' && report.comment._id) ? report.comment : null
+  const chatMessage = (report?.chatMessage && report.chatMessage !== null && typeof report.chatMessage === 'object' && report.chatMessage._id) ? report.chatMessage : null
   const reporter = (report?.reporter && report.reporter !== null && typeof report.reporter === 'object' && report.reporter._id) ? report.reporter : null
   const reportType = report?.type || 'question'
 
@@ -255,7 +334,7 @@ export default function ReportCard({ report }: ReportCardProps) {
                 )}
               </span>
               <Badge variant="outline" className="ml-2">
-                {reportType === 'question' ? 'Question' : reportType === 'answer' ? 'Answer' : 'Comment'}
+                {reportType === 'question' ? 'Question' : reportType === 'answer' ? 'Answer' : reportType === 'comment' ? 'Comment' : 'Chat Message'}
               </Badge>
             </div>
             {reportType === 'question' && question?._id ? (
@@ -299,9 +378,39 @@ export default function ReportCard({ report }: ReportCardProps) {
                   </div>
                 )}
               </div>
+            ) : reportType === 'chatMessage' && chatMessage?._id ? (
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="h3-semibold text-dark200_light900">
+                    Chat Group: {chatMessage?.chatGroup?.name || 'Unknown Group'}
+                  </span>
+                </div>
+                {chatMessage?.content && (
+                  <div className="mt-2 p-3 bg-light-800 dark:bg-dark-400 rounded-md border border-light-700 dark:border-dark-500">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Image
+                        src={chatMessage?.author?.picture || '/assets/icons/avatar.svg'}
+                        alt={chatMessage?.author?.name || 'User'}
+                        width={24}
+                        height={24}
+                        className="rounded-full"
+                      />
+                      <span className="text-xs font-semibold text-dark400_light700">
+                        {chatMessage?.author?.name || 'Unknown User'}
+                      </span>
+                      <span className="text-xs text-dark400_light700">
+                        <ClientTimestamp createdAt={chatMessage.createdAt} />
+                      </span>
+                    </div>
+                    <p className="text-sm text-dark200_light900 whitespace-pre-wrap break-words">
+                      {chatMessage.content}
+                    </p>
+                  </div>
+                )}
+              </div>
             ) : (
               <div className="h3-semibold text-dark400_light700">
-                {reportType === 'question' ? 'Question' : reportType === 'answer' ? 'Answer' : 'Comment'} has been deleted
+                {reportType === 'question' ? 'Question' : reportType === 'answer' ? 'Answer' : reportType === 'comment' ? 'Comment' : 'Chat Message'} has been deleted
               </div>
             )}
             <p className="text-sm text-dark400_light700 mt-2 line-clamp-2">
@@ -376,9 +485,48 @@ export default function ReportCard({ report }: ReportCardProps) {
 
             <div>
               <h3 className="text-sm font-semibold text-dark400_light700 mb-2">
-                {reportType === 'question' ? 'Question' : reportType === 'answer' ? 'Answer' : 'Comment'} Details
+                {reportType === 'chatMessage' ? 'Chat Message' : reportType === 'question' ? 'Question' : reportType === 'answer' ? 'Answer' : 'Comment'} Details
               </h3>
-              {reportType === 'question' && question?._id ? (
+              {reportType === 'chatMessage' && chatMessage?._id ? (
+                <>
+                  <div className="mb-3">
+                    <span className="text-sm font-semibold text-dark400_light700">Chat Group: </span>
+                    <span className="text-sm text-dark200_light900">
+                      {chatMessage?.chatGroup?.name || 'Unknown Group'}
+                    </span>
+                  </div>
+                  {chatMessage?.author ? (
+                    <div className="flex items-center gap-2 mb-3">
+                      <Image
+                        src={chatMessage.author?.picture || '/assets/images/default-avatar.png'}
+                        alt={chatMessage.author?.name || 'Unknown'}
+                        width={20}
+                        height={20}
+                        className="rounded-full"
+                      />
+                      <Link
+                        href={`/profile/${chatMessage.author?.clerkId || ''}`}
+                        className="text-sm text-primary-500 hover:underline"
+                      >
+                        {chatMessage.author?.name || 'Unknown'}
+                      </Link>
+                      <span className="text-sm text-dark400_light700">
+                        • <ClientTimestamp createdAt={chatMessage?.createdAt || new Date()} />
+                      </span>
+                    </div>
+                  ) : null}
+                  {chatMessage?.content ? (
+                    <div className="bg-light-800 dark:bg-dark-400 rounded-lg p-4 border border-light-700 dark:border-dark-500 mt-3">
+                      <p className="text-xs font-semibold text-dark400_light700 mb-2">Message Content:</p>
+                      <div className="text-dark200_light900">
+                        <p className="whitespace-pre-wrap break-words">{chatMessage.content}</p>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-dark400_light700 italic mt-3">This chat message has been deleted.</p>
+                  )}
+                </>
+              ) : reportType === 'question' && question?._id ? (
                 <>
                   <Link
                     href={`/question/${question?._id || ''}`}
@@ -494,7 +642,7 @@ export default function ReportCard({ report }: ReportCardProps) {
                 </>
               ) : (
                 <p className="text-dark400_light700 italic">
-                  This {reportType} has been deleted.
+                  This {reportType === 'chatMessage' ? 'chat message' : reportType === 'question' ? 'question' : reportType === 'answer' ? 'answer' : 'comment'} has been deleted.
                 </p>
               )}
             </div>
@@ -579,6 +727,13 @@ export default function ReportCard({ report }: ReportCardProps) {
                 </Button>
               </Link>
             )}
+            {chatMessage?._id && chatMessage?.chatGroup?._id && (
+              <Link href="/chat">
+                <Button variant="default">
+                  View Chat Group
+                </Button>
+              </Link>
+            )}
             {(question?._id || answer?._id || comment?._id) && (
               <Button
                 variant="destructive"
@@ -589,6 +744,15 @@ export default function ReportCard({ report }: ReportCardProps) {
                 disabled={isUpdating}
               >
                 Delete & Warn {reportType === 'question' ? 'Author' : reportType === 'answer' ? 'Author' : 'Author'}
+              </Button>
+            )}
+            {chatMessage?._id && chatMessage?.author?._id && (
+              <Button
+                variant="destructive"
+                onClick={handleBanUser}
+                disabled={isBanning || isUpdating}
+              >
+                {isBanning ? 'Banning...' : 'Ban User from Chat Group'}
               </Button>
             )}
           </DialogFooter>

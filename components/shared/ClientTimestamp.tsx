@@ -47,6 +47,8 @@ const ClientTimestamp = ({ createdAt, prefix = "", className }: Props) => {
   return <span className={className} suppressHydrationWarning>{text}</span>
 }
 
+// Named export for better HMR stability
+export { ClientTimestamp }
 export default ClientTimestamp
 
 

@@ -1,11 +1,18 @@
 import { Schema, models, model, Document } from 'mongoose';
 
+export interface IBannedUser {
+  userId: Schema.Types.ObjectId;
+  bannedAt: Date;
+  expiresAt: Date;
+}
+
 export interface IChatGroup extends Document {
   name: string;
   description?: string;
   tags: Schema.Types.ObjectId[];
   moderator: Schema.Types.ObjectId;
   members: Schema.Types.ObjectId[];
+  bannedUsers?: IBannedUser[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -16,6 +23,11 @@ const ChatGroupSchema = new Schema({
   tags: [{ type: Schema.Types.ObjectId, ref: 'Tag', required: true }],
   moderator: { type: Schema.Types.ObjectId, ref: 'User', required: true },
   members: [{ type: Schema.Types.ObjectId, ref: 'User' }],
+  bannedUsers: [{
+    userId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+    bannedAt: { type: Date, default: Date.now, required: true },
+    expiresAt: { type: Date, required: true },
+  }],
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now },
 });

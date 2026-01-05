@@ -9,8 +9,19 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { userId } = await auth();
     const { id } = await params;
-    const chatGroup = await getChatGroupById(id);
+    
+    // Get user from database if authenticated
+    let userDbId: string | undefined;
+    if (userId) {
+      const user = await getUserById({ userId });
+      if (user) {
+        userDbId = user._id.toString();
+      }
+    }
+    
+    const chatGroup = await getChatGroupById(id, userDbId);
     return NextResponse.json(chatGroup);
   } catch (error) {
     console.error('Error getting chat group:', error);

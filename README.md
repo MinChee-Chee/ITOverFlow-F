@@ -50,6 +50,20 @@ PUSHER_APP_ID=<your channels app id>
 PUSHER_SECRET=<your channels secret key>
 NEXT_PUBLIC_PUSHER_KEY=<your channels public key>
 NEXT_PUBLIC_PUSHER_CLUSTER=<your cluster, e.g., us2>
+
+# Hugging Face (for AI summarization and embeddings)
+# Get your API key from https://huggingface.co/settings/tokens
+HUGGINGFACE_API_KEY=<your hugging face api token>
+# Optional: Custom embedding model (defaults to sentence-transformers/all-MiniLM-L6-v2)
+HUGGINGFACE_EMBED_MODEL=sentence-transformers/all-MiniLM-L6-v2
+
+# Google Gemini (optional fallback for AI features)
+# Get your API key from https://makersuite.google.com/app/apikey
+GOOGLE_GEMINI_API_KEY=<your google gemini api key>
+# Or use any of these alternative variable names:
+# TAG_GOOGLE_GEMINI=<your google gemini api key>
+# GOOGLE_GEMINI_API_KEY_TAG=<your google gemini api key>
+# GEMINI_API_KEY=<your google gemini api key>
 ```
 
 ### Setup checklist
@@ -65,6 +79,12 @@ NEXT_PUBLIC_PUSHER_CLUSTER=<your cluster, e.g., us2>
    - Copy the App ID, Key, Secret, and Cluster from your Channels app
    - Add them to your `.env.local` file as shown above
    - The chat will work without Channels (messages save and load), but real-time updates require Channels to be configured
+
+3. **Hugging Face Setup (for AI summarization):**
+   - Go to [Hugging Face Settings](https://huggingface.co/settings/tokens) and create a new access token
+   - Copy the token and add it to your `.env.local` file as `HUGGINGFACE_API_KEY`
+   - The AI summarization feature will gracefully fall back to Google Gemini if Hugging Face is unavailable
+   - If neither service is configured, users will see a friendly message that the feature is temporarily unavailable
 
 ## Deploy on Vercel
 

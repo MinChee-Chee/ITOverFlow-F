@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json()
-    const { type, questionId, answerId, commentId, reason } = body
+    const { type, questionId, answerId, commentId, chatMessageId, reason } = body
 
     if (!type || !reason) {
       return NextResponse.json(
@@ -24,9 +24,9 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    if (!['question', 'answer', 'comment'].includes(type)) {
+    if (!['question', 'answer', 'comment', 'chatMessage'].includes(type)) {
       return NextResponse.json(
-        { error: 'Invalid report type. Must be question, answer, or comment' },
+        { error: 'Invalid report type. Must be question, answer, comment, or chatMessage' },
         { status: 400 }
       )
     }
@@ -47,6 +47,12 @@ export async function POST(req: NextRequest) {
     if (type === 'comment' && !commentId) {
       return NextResponse.json(
         { error: 'Comment ID is required for comment reports' },
+        { status: 400 }
+      )
+    }
+    if (type === 'chatMessage' && !chatMessageId) {
+      return NextResponse.json(
+        { error: 'Chat message ID is required for chat message reports' },
         { status: 400 }
       )
     }
@@ -81,13 +87,21 @@ export async function POST(req: NextRequest) {
       if (comment && (comment as any).answer && (comment as any).answer.question) {
         path = `/question/${(comment as any).answer.question._id}`
       }
+    } else if (type === 'chatMessage' && chatMessageId) {
+      // For chat messages, path is the chat page
+      const ChatMessage = (await import('@/database/chatMessage.model')).default
+      const chatMessage = await ChatMessage.findById(chatMessageId).populate('chatGroup', '_id')
+      if (chatMessage && (chatMessage as any).chatGroup) {
+        path = `/chat`
+      }
     }
 
     const result = await createReport({
-      type: type as 'question' | 'answer' | 'comment',
+      type: type as 'question' | 'answer' | 'comment' | 'chatMessage',
       questionId,
       answerId,
       commentId,
+      chatMessageId,
       reporterId: user._id.toString(),
       reason,
       path

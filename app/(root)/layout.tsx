@@ -5,6 +5,7 @@ import { Toaster } from '@/components/ui/toaster'
 import React from 'react'
 import Script from 'next/script'
 import PushNotificationsInitializer from '@/components/providers/PushNotificationsInitializer'
+import TermsChecker from '@/components/providers/TermsChecker'
 
 const Layout = ({ children }: { children: React.ReactNode }) => {
   return (
@@ -17,6 +18,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
         strategy="afterInteractive"
       />
       <PushNotificationsInitializer />
+      <TermsChecker />
       <Navbar />
       <div className="flex">
         <LeftSidebar />

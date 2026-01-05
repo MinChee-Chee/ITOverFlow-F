@@ -13,7 +13,7 @@ export async function createReport(params: CreateReportParams) {
   try {
     await connectToDatabase()
 
-    const { type, questionId, answerId, commentId, reporterId, reason, path } = params
+    const { type, questionId, answerId, commentId, chatMessageId, reporterId, reason, path } = params
 
     // Build query based on type
     let query: any = {
@@ -27,6 +27,8 @@ export async function createReport(params: CreateReportParams) {
       query.answer = answerId
     } else if (type === 'comment' && commentId) {
       query.comment = commentId
+    } else if (type === 'chatMessage' && chatMessageId) {
+      query.chatMessage = chatMessageId
     } else {
       return { error: "Invalid report type or missing ID" }
     }
@@ -35,7 +37,7 @@ export async function createReport(params: CreateReportParams) {
     const existingReport = await Report.findOne(query)
 
     if (existingReport) {
-      const contentType = type === 'question' ? 'question' : type === 'answer' ? 'answer' : 'comment'
+      const contentType = type === 'question' ? 'question' : type === 'answer' ? 'answer' : type === 'comment' ? 'comment' : 'chat message'
       return { error: `You have already reported this ${contentType}. Please wait for moderator review.` }
     }
 
@@ -57,6 +59,12 @@ export async function createReport(params: CreateReportParams) {
       if (!comment) {
         return { error: "Comment not found" }
       }
+    } else if (type === 'chatMessage' && chatMessageId) {
+      const ChatMessage = (await import('@/database/chatMessage.model')).default
+      const chatMessage = await ChatMessage.findById(chatMessageId)
+      if (!chatMessage) {
+        return { error: "Chat message not found" }
+      }
     }
 
     // Create report - only include the relevant content field based on type
@@ -70,13 +78,16 @@ export async function createReport(params: CreateReportParams) {
     // Only set the field that matches the type, leave others undefined
     if (type === 'question' && questionId) {
       reportData.question = questionId
-      // Explicitly don't set answer or comment
+      // Explicitly don't set answer, comment, or chatMessage
     } else if (type === 'answer' && answerId) {
       reportData.answer = answerId
-      // Explicitly don't set question or comment
+      // Explicitly don't set question, comment, or chatMessage
     } else if (type === 'comment' && commentId) {
       reportData.comment = commentId
-      // Explicitly don't set question or answer
+      // Explicitly don't set question, answer, or chatMessage
+    } else if (type === 'chatMessage' && chatMessageId) {
+      reportData.chatMessage = chatMessageId
+      // Explicitly don't set question, answer, or comment
     }
 
     const report = await Report.create(reportData)
@@ -111,6 +122,8 @@ export async function getReports(params: GetReportsParams) {
 
     const Answer = (await import('@/database/answer.model')).default
     const Comment = (await import('@/database/comment.model')).default
+    const ChatMessage = (await import('@/database/chatMessage.model')).default
+    const ChatGroup = (await import('@/database/chatGroup.model')).default
 
     const reports = await Report.find(query)
       .populate({
@@ -174,6 +187,26 @@ export async function getReports(params: GetReportsParams) {
               select: '_id title',
               strictPopulate: false
             }
+          }
+        ]
+      })
+      .populate({
+        path: 'chatMessage',
+        model: ChatMessage,
+        select: '_id content createdAt author chatGroup',
+        strictPopulate: false,
+        populate: [
+          {
+            path: 'author',
+            model: User,
+            select: '_id clerkId name username picture',
+            strictPopulate: false
+          },
+          {
+            path: 'chatGroup',
+            model: ChatGroup,
+            select: '_id name',
+            strictPopulate: false
           }
         ]
       })

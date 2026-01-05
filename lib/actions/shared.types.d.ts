@@ -115,6 +115,7 @@ export interface CreateUserParams {
   username: string;
   email: string;
   picture: string;
+  termsAccepted?: boolean;
 }
 
 export interface GetUserByIdParams {
@@ -192,6 +193,13 @@ export interface GetMessagesParams {
   chatGroupId: string;
   page?: number;
   pageSize?: number;
+  userId?: string; // Optional userId to check ban status
+}
+
+export interface DeleteMessageParams {
+  messageId: string;
+  userId: string; // User ID to verify ownership
+  path: string;
 }
 
 export interface UpdateChatGroupParams {
@@ -207,6 +215,13 @@ export interface DeleteChatGroupParams {
   path: string;
 }
 
+export interface BanUserFromChatGroupParams {
+  chatGroupId: string;
+  userId: string; // User to ban
+  moderatorId: string; // Moderator performing the ban
+  path: string;
+}
+
 export interface GetModeratorChatGroupsParams {
   moderatorId: string;
   searchQuery?: string;
@@ -215,10 +230,11 @@ export interface GetModeratorChatGroupsParams {
 }
 
 export interface CreateReportParams {
-  type: 'question' | 'answer' | 'comment';
+  type: 'question' | 'answer' | 'comment' | 'chatMessage';
   questionId?: string;
   answerId?: string;
   commentId?: string;
+  chatMessageId?: string;
   reporterId: string;
   reason: string;
   path: string;

@@ -17,6 +17,12 @@ const isPublicRoute = createRouteMatcher([
   '/sign-up(.*)',
 ]);
 
+// Public read-only API endpoints (GET requests only, no auth required)
+const isPublicReadOnlyApiRoute = createRouteMatcher([
+  '/api/answers(.*)', // Allow public viewing of answers
+  '/api/comments(.*)', // Allow public viewing of comments
+]);
+
 const isAdminRoute = createRouteMatcher(['/admin(.*)']);
 const isApiRoute = createRouteMatcher(['/api(.*)']);
 const isAuthRoute = createRouteMatcher(['/api/auth(.*)', '/sign-in(.*)', '/sign-up(.*)']);
@@ -104,8 +110,18 @@ export default clerkMiddleware(async (auth, req: NextRequest) => {
     }
   }
 
-  // Require authentication for all API routes
+  // Require authentication for all API routes, except public read-only GET endpoints
   if (isApiRoute(req)) {
+    const method = req.method.toUpperCase();
+    const isGetRequest = method === 'GET';
+    
+    // Allow GET requests to public read-only endpoints without authentication
+    if (isGetRequest && isPublicReadOnlyApiRoute(req)) {
+      // Allow the request to proceed without authentication
+      return NextResponse.next();
+    }
+    
+    // Require authentication for all other API routes (POST, PUT, DELETE, and non-public GET)
     try {
       await auth.protect();
     } catch (error) {

@@ -56,6 +56,16 @@ const ParseHTML = ({ data }: Props) => {
     return () => cancelAnimationFrame(frameId)
   }, [data, isMounted])
 
+  if (!isMounted) {
+    return (
+      <div 
+        ref={containerRef}
+        className={'markdown w-full min-w-full'} 
+        suppressHydrationWarning
+      />
+    )
+  }
+
   return (
     <div 
       ref={containerRef}
@@ -66,4 +76,6 @@ const ParseHTML = ({ data }: Props) => {
   )
 }
 
+// Named export for better HMR stability
+export { ParseHTML }
 export default ParseHTML
