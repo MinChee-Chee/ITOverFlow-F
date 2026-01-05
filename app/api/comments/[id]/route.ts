@@ -7,7 +7,7 @@ import { connectToDatabase } from "@/lib/mongoose";
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { userId } = await auth();
@@ -19,7 +19,8 @@ export async function DELETE(
       );
     }
 
-    const commentId = params.id;
+    const resolvedParams = await params;
+    const commentId = resolvedParams.id;
 
     if (!commentId) {
       return NextResponse.json(

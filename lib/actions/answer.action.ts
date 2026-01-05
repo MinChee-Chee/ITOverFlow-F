@@ -81,7 +81,7 @@ export async function getAnswers(params: GetAnswersParams) {
   try {
     await connectToDatabase();
 
-    const { questionId, sortBy, page=1, pageSize=3 } = params;
+    const { questionId, sortBy, page = 1, pageSize = 3 } = params;
 
     const skipAmount = (page - 1) * pageSize;
 
@@ -104,13 +104,19 @@ export async function getAnswers(params: GetAnswersParams) {
         break;
     }
 
-    const answers = await Answer.find({ question: questionId })
-      .populate("author", "_id clerkId name picture")
-      .skip(skipAmount)
-      .limit(pageSize)
-      .sort(sortOptions)
+    // Optimize: Use .lean() and select only needed fields
 
-    const totalAnswers = await Answer.countDocuments({ question: questionId });
+    // Optimize: Use .lean() and select only needed fields, run queries in parallel
+    const [answers, totalAnswers] = await Promise.all([
+      Answer.find({ question: questionId })
+        .select('_id content author upvotes downvotes createdAt')
+        .populate("author", "_id clerkId name picture")
+        .skip(skipAmount)
+        .limit(pageSize)
+        .sort(sortOptions)
+        .lean(),
+      Answer.countDocuments({ question: questionId })
+    ]);
 
     const isNextAnswer = totalAnswers > skipAmount + answers.length;
 

@@ -4,6 +4,7 @@ import Link from 'next/link'
 import React, { Suspense } from 'react'
 import Theme from './Theme'
 import MobileNav from './MobileNav'
+import MenubarComponentAdminModeratorAM from '../MenubarAM'
 
 const Navbar = () => {
   return (
@@ -26,6 +27,8 @@ const Navbar = () => {
 
 
         <div className='flex-between gap-5'>
+            <MenubarComponentAdminModeratorAM />
+            
             <Theme/>
             
             <SignedIn>

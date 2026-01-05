@@ -5,7 +5,7 @@ import { Protect, useUser } from "@clerk/nextjs"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Loader2, Send, Bot, User, X, Copy, Eye, MessageSquare, ArrowUp, Sparkles, History as HistoryIcon } from "lucide-react"
-import { formatAndDivideNumber, getDeviconClassName } from "@/lib/utils"
+import { formatAndDivideNumber, getDeviconClassName, calculateSimilarityFromDistance } from "@/lib/utils"
 import { useRouter } from "next/navigation"
 
 
@@ -20,8 +20,10 @@ type RecommendationResult = {
     upvotes?: number
     answers?: number
     createdAt?: string | Date
+    similarity?: number
   }>
   distances?: number[]
+  similarities?: number[]
 }
 
 type ChatMessage = {
@@ -379,20 +381,27 @@ export default function RecommendationPage() {
                     // Extract content preview
                     const contentPreview = metadata.content || results.documents?.[idx] || ""
                     
-                    // Calculate similarity percentage
-                    const distance = results.distances?.[idx]
+                    // Get similarity score (pre-calculated on backend, or fallback calculation)
                     let similarity: number | null = null
                     
-                    if (distance !== undefined && distance !== null && !isNaN(distance)) {
-                      if (distance < 0) {
-                        similarity = Math.max(0, Math.min(100, (1 + distance) * 100))
-                      } else {
-                        if (distance <= 2) {
-                          similarity = Math.max(0, Math.min(100, (1 - distance / 2) * 100))
-                        } else {
-                          similarity = Math.max(0, Math.min(100, 100 * Math.exp(-distance / 2)))
-                        }
-                      }
+                    // Prefer backend-calculated similarity score
+                    if (results.similarities && idx < results.similarities.length && 
+                        results.similarities[idx] !== undefined && results.similarities[idx] !== null) {
+                      similarity = results.similarities[idx]
+                    } 
+                    // Fallback to similarity in metadata (if backend added it)
+                    else if (metadata.similarity !== undefined && metadata.similarity !== null) {
+                      similarity = metadata.similarity
+                    }
+                    // Legacy fallback: calculate from distance using improved algorithm
+                    else if (results.distances && results.distances.length > 0) {
+                      const distance = results.distances[idx]
+                      similarity = calculateSimilarityFromDistance(distance, results.distances)
+                    }
+                    
+                    // Round to 1 decimal place for display
+                    if (similarity !== null) {
+                      similarity = Math.round(similarity * 10) / 10
                     }
                     
                     const questionUrl = typeof window !== 'undefined' ? `${window.location.origin}/question/${id}` : `/question/${id}`

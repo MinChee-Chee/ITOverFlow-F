@@ -6,7 +6,7 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { FaHistory, FaRobot, FaUser, FaCopy, FaEye, FaComment, FaArrowUp, FaSpinner } from "react-icons/fa"
 import { IoMdArrowBack, IoMdRefresh } from "react-icons/io"
-import { formatAndDivideNumber, getDeviconClassName } from "@/lib/utils"
+import { formatAndDivideNumber, getDeviconClassName, calculateSimilarityFromDistance } from "@/lib/utils"
 import { useRouter } from "next/navigation"
 import ClientTimestamp from "@/components/shared/ClientTimestamp"
 
@@ -441,21 +441,17 @@ export default function RecommendationHistoryPage() {
                     
                     const contentPreview = metadata.content || ""
                     
-                    // Calculate similarity percentage
+                    // Calculate similarity percentage using improved algorithm
                     const distance = results.distances?.[idx]
-                    let similarity: number | null = null
+                    const similarity = calculateSimilarityFromDistance(
+                      distance,
+                      results.distances
+                    )
                     
-                    if (distance !== undefined && distance !== null && !isNaN(distance)) {
-                      if (distance < 0) {
-                        similarity = Math.max(0, Math.min(100, (1 + distance) * 100))
-                      } else {
-                        if (distance <= 2) {
-                          similarity = Math.max(0, Math.min(100, (1 - distance / 2) * 100))
-                        } else {
-                          similarity = Math.max(0, Math.min(100, 100 * Math.exp(-distance / 2)))
-                        }
-                      }
-                    }
+                    // Round to 1 decimal place for display
+                    const displaySimilarity = similarity !== null 
+                      ? Math.round(similarity * 10) / 10 
+                      : null
                     
                     const questionHref = `/question/${id}`
                     const getQuestionUrl = () =>
@@ -475,18 +471,18 @@ export default function RecommendationHistoryPage() {
                             {title.replace(/&#39;/g, "'").replace(/&quot;/g, '"').replace(/&amp;/g, '&')}
                           </h4>
                           <div className="flex items-center gap-2 flex-shrink-0 self-start" onClick={(e) => e.stopPropagation()}>
-                            {similarity !== null && (
+                            {displaySimilarity !== null && (
                               <span
                                 className={`text-[10px] font-bold px-2.5 py-1 rounded-full shadow-sm min-w-[2.75rem] text-center h-fit ${
-                                  similarity >= 80
+                                  displaySimilarity >= 80
                                     ? 'bg-green-500 text-white shadow-green-500/20'
-                                    : similarity >= 60
+                                    : displaySimilarity >= 60
                                     ? 'bg-blue-500 text-white shadow-blue-500/20'
                                     : 'bg-gray-500 text-white shadow-gray-500/20'
                                 }`}
-                                title={`Similarity: ${similarity.toFixed(1)}%`}
+                                title={`Similarity: ${displaySimilarity.toFixed(1)}%`}
                               >
-                                {similarity.toFixed(0)}%
+                                {displaySimilarity.toFixed(0)}%
                               </span>
                             )}
                             <button

@@ -19,6 +19,14 @@ interface Props {
     filter?: string;
 }
 
+// Helper function to safely convert unknown ID to string
+const getIdString = (id: unknown): string => {
+  if (id === null || id === undefined) return '';
+  if (typeof id === 'string') return id;
+  if (typeof id === 'object' && '_id' in id) return String((id as any)._id);
+  return String(id);
+};
+
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const AllAnswers = async ({questionId, userId, totalAnswers, page, filter} :Props) => {
     // Ensure userId is always a string (handle ObjectId edge cases)
@@ -38,8 +46,10 @@ const AllAnswers = async ({questionId, userId, totalAnswers, page, filter} :Prop
         </div>
         
         <div>
-            {answer.answers.map((answer) => (
-                <article key={answer._id}
+            {answer.answers.map((answer) => {
+                const answerId = getIdString(answer._id);
+                return (
+                <article key={answerId}
                 className='light-border border-b py-10'>
                     <div className="flex items-center justify-between">
                         <div>
@@ -70,7 +80,7 @@ const AllAnswers = async ({questionId, userId, totalAnswers, page, filter} :Prop
                         <div className="flex items-center gap-2">
                             <Votes
                                 type="Answer"
-                                itemId={JSON.stringify(answer._id)}
+                                itemId={JSON.stringify(answerId)}
                                 userId={userIdString ? JSON.stringify(userIdString): ""}
                                 upvotes={answer.upvotes.length}
                                 hasupVoted={userIdString ? answer.upvotes.some((id: any) => id.toString() === userIdString): false}
@@ -80,7 +90,7 @@ const AllAnswers = async ({questionId, userId, totalAnswers, page, filter} :Prop
                             {userIdString && (
                                 <ReportButton
                                     type="answer"
-                                    answerId={answer._id.toString()}
+                                    answerId={answerId}
                                     userId={userIdString}
                                 />
                             )}
@@ -90,11 +100,12 @@ const AllAnswers = async ({questionId, userId, totalAnswers, page, filter} :Prop
                       <ExpandableAnswer content={answer.content} />
                     </div>
                     <CommentsSection 
-                        answerId={answer._id.toString()} 
+                        answerId={answerId} 
                         currentUserId={userIdString || undefined}
                     />
                 </article>
-            ))}
+            );
+            })}
         </div>
 
         <div className="mt-9 w-full">

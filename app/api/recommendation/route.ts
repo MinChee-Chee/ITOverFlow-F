@@ -121,9 +121,79 @@ export async function POST(req: Request) {
     const metadatas: any[] = Array.isArray(results.metadatas) && Array.isArray(results.metadatas[0]) ? results.metadatas[0] : [];
     
     const rawDistances = Array.isArray(results.distances) && Array.isArray(results.distances[0]) ? results.distances[0] : [];
-    const distances: number[] = rawDistances.filter((dist): dist is number => dist !== null && dist !== undefined && typeof dist === 'number');
+    const distances: number[] = rawDistances.filter((dist): dist is number => dist !== null && dist !== undefined && typeof dist === 'number' && !isNaN(dist));
 
     console.log(`ChromaDB returned ${ids.length} results for query: "${query}"`);
+
+    /**
+     * Improved similarity score calculation
+     * Handles both cosine distance and L2/Euclidean distance
+     * Uses normalized scoring relative to the best match
+     */
+    function calculateSimilarityScores(distances: number[]): number[] {
+      if (!distances || distances.length === 0) {
+        return [];
+      }
+
+      // Filter out invalid distances
+      const validDistances = distances.filter(d => d !== null && d !== undefined && !isNaN(d) && isFinite(d));
+      
+      if (validDistances.length === 0) {
+        return distances.map(() => 0);
+      }
+
+      // Find minimum distance (best match)
+      const minDistance = Math.min(...validDistances);
+      const maxDistance = Math.max(...validDistances);
+      
+      // Detect distance metric type based on value range
+      // Cosine distance typically ranges 0-2 (where 0 = identical, 2 = opposite)
+      // L2/Euclidean distance can be much larger
+      const isLikelyCosine = maxDistance <= 2.5;
+      
+      // Calculate similarity scores
+      const similarities = validDistances.map((distance) => {
+        if (isLikelyCosine) {
+          // Cosine distance: distance = 1 - cosine_similarity
+          // For normalized embeddings, cosine similarity ranges -1 to 1
+          // So distance ranges 0 to 2, where 0 = identical
+          // Convert to similarity: similarity = (1 - distance) * 100
+          // But we normalize relative to the best match for better distribution
+          const baseSimilarity = Math.max(0, 1 - distance);
+          const normalizedSimilarity = minDistance === 0 
+            ? baseSimilarity 
+            : baseSimilarity / (1 - minDistance);
+          return Math.min(100, Math.max(0, normalizedSimilarity * 100));
+        } else {
+          // L2/Euclidean distance: larger distance = less similar
+          // Use inverse relationship with normalization
+          // Formula: similarity = (1 / (1 + normalized_distance)) * 100
+          const normalizedDistance = minDistance === 0 
+            ? distance 
+            : (distance - minDistance) / (maxDistance - minDistance + 0.001); // +0.001 to avoid division by zero
+          
+          // Use exponential decay for smoother distribution
+          const similarity = Math.exp(-normalizedDistance * 2) * 100;
+          return Math.min(100, Math.max(0, similarity));
+        }
+      });
+
+      // Ensure we return the same length as input
+      const result: number[] = [];
+      let simIdx = 0;
+      for (let i = 0; i < distances.length; i++) {
+        if (distances[i] !== null && distances[i] !== undefined && !isNaN(distances[i]) && isFinite(distances[i])) {
+          result.push(similarities[simIdx++]);
+        } else {
+          result.push(0);
+        }
+      }
+      
+      return result;
+    }
+
+    // Calculate similarity scores
+    const similarityScores = calculateSimilarityScores(distances);
 
     // Fetch question titles from MongoDB
     let questionTitles: Record<string, { 
@@ -198,6 +268,7 @@ export async function POST(req: Request) {
           upvotes: 0,
           answers: 0,
           createdAt: null,
+          similarity: 0,
         };
       }
       const questionData = questionTitles[id];
@@ -213,6 +284,7 @@ export async function POST(req: Request) {
         upvotes: questionData?.upvotes ?? existingMeta?.upvotes ?? 0,
         answers: questionData?.answers ?? existingMeta?.answers ?? 0,
         createdAt: questionData?.createdAt || existingMeta?.createdAt || null,
+        similarity: idx < similarityScores.length ? similarityScores[idx] : 0,
       };
     });
 
@@ -221,6 +293,7 @@ export async function POST(req: Request) {
       documents,
       metadatas: enrichedMetadatas,
       distances,
+      similarities: similarityScores,
     };
 
     // Save history asynchronously (non-blocking)

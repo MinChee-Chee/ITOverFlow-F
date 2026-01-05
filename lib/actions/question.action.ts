@@ -5,60 +5,80 @@ import Tag from "@/database/tag.model";
 import { connectToDatabase } from "../mongoose"
 import { CreateQuestionParams, DeleteQuestionParams, EditQuestionParams, GetQuestionByIdParams, GetQuestionsParams, QuestionVoteParams, RecommendedParams } from "./shared.types";
 import User from "@/database/user.model";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, unstable_cache } from "next/cache";
 import Answer from "@/database/answer.model";
 import Interaction from "@/database/interaction.model";
 import { FilterQuery } from "mongoose";
 import { notifyUserByClerkId } from "../push-notifications";
 import { escapeRegex } from "../utils";
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export async function getQuestions(params: GetQuestionsParams) {
-  try {
-    await connectToDatabase();
+// Internal function for fetching questions (used by cache)
+async function _getQuestionsInternal(params: GetQuestionsParams) {
+  await connectToDatabase();
 
-    const { searchQuery, filter, page =1, pageSize=10 } = params;
+  const { searchQuery, filter, page = 1, pageSize = 10 } = params;
+  const skipAmount = (page - 1) * pageSize;
 
-    const skipAmount = (page - 1)* pageSize;
+  const query: FilterQuery<typeof Question> = {};
 
-    const query: FilterQuery<typeof Question> = {};
+  if (searchQuery) {
+    const escapedQuery = escapeRegex(searchQuery);
+    query.$or = [
+      { title: { $regex: new RegExp(escapedQuery, "i") } },
+      { content: { $regex: new RegExp(escapedQuery, "i") } },
+    ]
+  }
 
-    if(searchQuery) {
-      const escapedQuery = escapeRegex(searchQuery);
-      query.$or = [
-        { title: { $regex: new RegExp(escapedQuery, "i") }},
-        { content: { $regex: new RegExp(escapedQuery, "i") }},
-      ]
-    }
+  let sortOptions = {};
 
-    let sortOptions = {};
+  switch (filter) {
+    case "newest":
+      sortOptions = { createdAt: -1 }
+      break;
+    case "frequent":
+      sortOptions = { views: -1 }
+      break;
+    case "unanswered":
+      query.answers = { $size: 0 }
+      break;
+    default:
+      break;
+  }
 
-    switch (filter) {
-      case "newest":
-        sortOptions = { createdAt: -1 }
-        break;
-      case "frequent":
-        sortOptions = { views: -1 }
-        break;
-      case "unanswered":
-        query.answers = { $size: 0 }
-        break;
-      default:
-        break;
-    }
-
-    const questions = await Question.find(query)
-      .populate({ path: 'tags', model: Tag })
-      .populate({ path: 'author', model: User })
+  // Optimize: Use .lean() for faster queries, select only needed fields
+  const [questions, totalQuestions] = await Promise.all([
+    Question.find(query)
+      .select('_id title content tags views upvotes downvotes answers author createdAt')
+      .populate({ path: 'tags', model: Tag, select: '_id name' })
+      .populate({ path: 'author', model: User, select: '_id clerkId name picture username' })
       .skip(skipAmount)
       .limit(pageSize)
       .sort(sortOptions)
+      .lean(),
+    Question.countDocuments(query)
+  ]);
 
-      const totalQuestions = await Question.countDocuments(query);
+  const isNext = totalQuestions > skipAmount + questions.length;
 
-      const isNext = totalQuestions > skipAmount + questions.length;
+  return { questions, isNext };
+}
 
-    return { questions, isNext };
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export async function getQuestions(params: GetQuestionsParams) {
+  try {
+    // Cache non-search queries for 60 seconds to improve TTFB
+    // Don't cache search queries as they're user-specific
+    if (!params.searchQuery && params.filter !== 'recommended') {
+      const cacheKey = `questions-${params.filter || 'default'}-${params.page || 1}`;
+      return await unstable_cache(
+        () => _getQuestionsInternal(params),
+        [cacheKey],
+        { revalidate: 60, tags: ['questions'] }
+      )();
+    }
+    
+    // For search queries, fetch directly (no cache)
+    return await _getQuestionsInternal(params);
   } catch (error) {
     console.log(error)
     throw error;

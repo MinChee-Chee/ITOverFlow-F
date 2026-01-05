@@ -1,8 +1,7 @@
 "use client"
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 
 import Prism from 'prismjs'
-import parse from 'html-react-parser'
 
 import "prismjs/components/prism-java";
 import "prismjs/components/prism-c";
@@ -32,15 +31,19 @@ interface Props {
 
 const ParseHTML = ({ data }: Props) => {
   const containerRef = React.useRef<HTMLDivElement>(null)
+  const [isMounted, setIsMounted] = useState(false)
   
-  // Parse once per `data` value so initial render isn't empty
-  const parsedContent = useMemo(() => parse(data), [data])
-
-  // Highlight after render when content is present
+  // Track mount state to prevent hydration mismatch
   useEffect(() => {
-    if (!parsedContent || !containerRef.current) return
-    // Use setTimeout to ensure DOM is ready after hydration
-    const timer = setTimeout(() => {
+    setIsMounted(true)
+  }, [])
+
+  // Highlight after render when content is present and mounted
+  useEffect(() => {
+    if (!isMounted || !containerRef.current) return
+    
+    // Use requestAnimationFrame to ensure it runs after hydration
+    const frameId = requestAnimationFrame(() => {
       // Only highlight code blocks within this container
       const codeBlocks = containerRef.current?.querySelectorAll('pre code')
       if (codeBlocks) {
@@ -48,18 +51,18 @@ const ParseHTML = ({ data }: Props) => {
           Prism.highlightElement(block as HTMLElement)
         })
       }
-    }, 0)
-    return () => clearTimeout(timer)
-  }, [parsedContent])
+    })
+    
+    return () => cancelAnimationFrame(frameId)
+  }, [data, isMounted])
 
   return (
     <div 
       ref={containerRef}
       className={'markdown w-full min-w-full'} 
       suppressHydrationWarning
-    >
-      {parsedContent}
-    </div>
+      dangerouslySetInnerHTML={{ __html: data }}
+    />
   )
 }
 

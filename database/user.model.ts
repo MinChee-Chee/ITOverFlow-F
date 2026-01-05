@@ -30,6 +30,11 @@ const UserSchema = new Schema({
   joinedAt: { type: Date, default: Date.now },
 });
 
+// Add indexes for frequently queried fields
+// Note: username and email already have indexes from unique: true, so we don't duplicate them
+UserSchema.index({ clerkId: 1 }, { unique: true }) // Explicit index for clerkId lookups
+UserSchema.index({ name: 'text' }) // Text search index (different from unique index)
+
 const User = models.User || model('User', UserSchema);
 
 export default User;

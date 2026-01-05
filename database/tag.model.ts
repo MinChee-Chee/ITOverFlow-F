@@ -16,6 +16,11 @@ const TagSchema = new Schema({
   createdOn: { type: Date, default: Date.now },
 });
 
+// Add indexes for frequently queried fields
+// Note: name already has an index from unique: true, so we don't duplicate it
+TagSchema.index({ name: 'text', description: 'text' }) // Text search index (different from unique index)
+TagSchema.index({ questions: 1 }) // For tag question queries
+
 const Tag = models.Tag || model('Tag', TagSchema);
 
 export default Tag;

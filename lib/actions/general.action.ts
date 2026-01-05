@@ -31,21 +31,24 @@ export async function globalSearch(params: SearchParams) {
       const typeLower = type?.toLowerCase();
   
       if (!typeLower || !SearchableTypes.includes(typeLower)) {
-        // Search in all models
-  
-        for (const { model, searchField, type } of modelsAndTypes) {
-          const queryResults = await model
+        // Search in all models - use parallel queries for better performance
+        const searchPromises = modelsAndTypes.map(({ model, searchField, type }) =>
+          model
             .find({ [searchField]: regexQuery })
-            .limit(2);
-            console.log(queryResults); 
-            results.push(
-                ...queryResults.map((item: any) => ({
-                  title: type === "answer" ? `Answers containing ${query}` : item[searchField],
-                  type,
-                  id: type === "user" ? item.clerkId : type === "answer" ? item.question : item._id,
-                }))
-              );
-        }
+            .select(type === "user" ? "_id clerkId name" : type === "answer" ? "_id question content" : `_id ${searchField}`)
+            .limit(2)
+            .lean()
+            .then(queryResults =>
+              queryResults.map((item: any) => ({
+                title: type === "answer" ? `Answers containing ${query}` : item[searchField],
+                type,
+                id: type === "user" ? item.clerkId : type === "answer" ? item.question : item._id,
+              }))
+            )
+        );
+        
+        const searchResults = await Promise.all(searchPromises);
+        results = searchResults.flat();
       } else {
         // Search in specific model (use normalized lowercase type)
         const modelInfo = modelsAndTypes.find((item) => item.type === typeLower);
@@ -56,7 +59,9 @@ export async function globalSearch(params: SearchParams) {
   
         const queryResults = await modelInfo.model
           .find({ [modelInfo.searchField]: regexQuery })
-          .limit(8);
+          .select(typeLower === "user" ? "_id clerkId name" : typeLower === "answer" ? "_id question content" : `_id ${modelInfo.searchField}`)
+          .limit(8)
+          .lean();
   
         results = queryResults.map((item: any) => {
           const resultType = typeLower; // always normalized
@@ -76,7 +81,6 @@ export async function globalSearch(params: SearchParams) {
           };
         });
       }
-      console.log(results)
       return JSON.stringify(results);
     } catch (error) {
       console.log(`Error fetching global results, ${error}`);

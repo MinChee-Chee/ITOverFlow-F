@@ -45,9 +45,24 @@ const Votes = ({
   const [localHasSaved, setLocalHasSaved] = useState(hasSaved);
 
   const parsedItemId = useMemo(() => {
+    // If itemId is empty or not a string, return as-is
+    if (!itemId || typeof itemId !== 'string') {
+      return itemId
+    }
+    
+    // Check if it looks like a JSON string (starts with quote or bracket/brace)
+    const trimmed = itemId.trim()
+    const looksLikeJson = trimmed.startsWith('"') || trimmed.startsWith('[') || trimmed.startsWith('{')
+    
+    if (!looksLikeJson) {
+      // Plain string, return as-is
+      return itemId
+    }
+    
     try {
       return JSON.parse(itemId)
     } catch (error) {
+      // Only log error if it looked like JSON but failed to parse
       console.error("[Votes] Failed to parse itemId JSON:", { itemId, error })
       // Fallback: use the raw string so voting/saving can still work
       return itemId

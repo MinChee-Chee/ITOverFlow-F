@@ -24,6 +24,14 @@ const QuestionSchema = new Schema({
   createdAt: { type: Date, default: Date.now }
 })
 
+// Add indexes for frequently queried fields
+QuestionSchema.index({ createdAt: -1 }) // For newest filter
+QuestionSchema.index({ views: -1 }) // For frequent filter
+QuestionSchema.index({ author: 1 }) // For author queries
+QuestionSchema.index({ tags: 1 }) // For tag queries
+QuestionSchema.index({ title: 'text', content: 'text' }) // For text search
+QuestionSchema.index({ answers: 1 }) // For unanswered filter
+
 const Question = models.Question || model('Question', QuestionSchema);
 
 export default Question;

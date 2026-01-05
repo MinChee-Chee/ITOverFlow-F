@@ -18,6 +18,11 @@ const AnswerSchema = new Schema({
     createdAt: { type: Date, default: Date.now }
 })
 
+// Add indexes for frequently queried fields
+AnswerSchema.index({ question: 1, createdAt: -1 }) // For question answers
+AnswerSchema.index({ author: 1 }) // For author queries
+AnswerSchema.index({ createdAt: -1 }) // For recent answers
+
 const Answer = models.Answer || model('Answer', AnswerSchema);
 
 export default Answer;
