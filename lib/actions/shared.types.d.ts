@@ -213,3 +213,85 @@ export interface GetModeratorChatGroupsParams {
   page?: number;
   pageSize?: number;
 }
+
+export interface CreateReportParams {
+  type: 'question' | 'answer' | 'comment';
+  questionId?: string;
+  answerId?: string;
+  commentId?: string;
+  reporterId: string;
+  reason: string;
+  path: string;
+}
+
+export interface GetReportsParams {
+  page?: number;
+  pageSize?: number;
+  status?: 'pending' | 'reviewed' | 'resolved' | 'dismissed';
+  searchQuery?: string;
+}
+
+export interface UpdateReportStatusParams {
+  reportId: string;
+  status: 'pending' | 'reviewed' | 'resolved' | 'dismissed';
+  reviewedBy: string;
+  path: string;
+}
+
+export interface CreateWarningParams {
+  userId: string;
+  moderatorId: string;
+  questionId?: string;
+  reason: string;
+  message: string;
+}
+
+export interface GetWarningsParams {
+  userId: string;
+  includeRead?: boolean;
+}
+
+export interface MarkWarningAsReadParams {
+  warningId: string;
+  userId: string;
+}
+
+export interface DeleteQuestionWithWarningParams {
+  questionId: string;
+  moderatorId: string;
+  reason: string;
+  message: string;
+  path: string;
+}
+
+export interface DeleteAnswerWithWarningParams {
+  answerId: string;
+  moderatorId: string;
+  reason: string;
+  message: string;
+  path: string;
+}
+
+export interface DeleteCommentWithWarningParams {
+  commentId: string;
+  moderatorId: string;
+  reason: string;
+  message: string;
+  path: string;
+}
+
+export interface CreateCommentParams {
+  content: string;
+  author: string; // User ID
+  answerId: string; // Answer ID
+  path: string;
+}
+
+export interface GetCommentsParams {
+  answerId: string;
+}
+
+export interface DeleteCommentParams {
+  commentId: string;
+  path: string;
+}

@@ -13,12 +13,27 @@ import Image from "next/image";
 import Link from "next/link";
 import React from "react";
 import ClientTimestamp from "@/components/shared/ClientTimestamp";
+import ReportButton from "@/components/shared/ReportButton";
 
 const Question = async ({params, searchParams}: any) => {
   const resolvedParams = await params;
   const resolvedSearchParams = await searchParams;
   const result = await getQuestionById({questionId: resolvedParams.id});
   const {userId: clerkId} = await auth();
+
+  if (!result) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="text-center">
+          <h1 className="h1-bold text-dark100_light900 mb-4">Question Not Found</h1>
+          <p className="text-dark400_light700 mb-6">This question may have been deleted or does not exist.</p>
+          <Link href="/" className="text-primary-500 hover:underline">
+            Return to Home
+          </Link>
+        </div>
+      </div>
+    )
+  }
 
   let mongoUser;
   if (clerkId) {
@@ -28,7 +43,8 @@ const Question = async ({params, searchParams}: any) => {
   <>
     <div className="flex-start w-full flex-col">
     <div className="flex w-full flex-col-reverse justify-between gap-5 sm:flex-row sm:items-center sm:gap-2">
-      <Link href={`/profile/${result.author.clerkId}`}  className="flex items-center justify-start gap-1" >
+      {result.author ? (
+        <Link href={`/profile/${result.author.clerkId}`}  className="flex items-center justify-start gap-1" >
         <Image
           src={result.author.picture}
           className="rounded-full"
@@ -39,8 +55,15 @@ const Question = async ({params, searchParams}: any) => {
         <p className="paragraph-semibold text-dark300_light700">
           {result.author.name}
         </p>
-      </Link> 
-        <div className="flex justify-end">
+      </Link>
+      ) : (
+        <div className="flex items-center justify-start gap-1">
+          <p className="paragraph-semibold text-dark300_light700">
+            Unknown Author
+          </p>
+        </div>
+      )} 
+        <div className="flex justify-end gap-2">
             <Votes
               type="Question"
               itemId={JSON.stringify(result._id)}
@@ -51,6 +74,13 @@ const Question = async ({params, searchParams}: any) => {
               hasdownVoted={mongoUser ? result.downvotes.includes(mongoUser._id) : false}
               hasSaved={mongoUser?.saved?.includes(result._id) ?? false}
             />
+            {mongoUser && (
+              <ReportButton
+                type="question"
+                questionId={result._id.toString()}
+                userId={mongoUser._id.toString()}
+              />
+            )}
         </div>
     </div>
     <h2 className="h2-semibold text-dark200_light900 mt-3.5 w-full text-left">{result.title}</h2>
@@ -102,7 +132,7 @@ const Question = async ({params, searchParams}: any) => {
 
     <AllAnswers
     questionId={result._id}
-    userId={mongoUser? mongoUser._id: ""}
+    userId={mongoUser? mongoUser._id.toString(): ""}
     totalAnswers={result.answers.length}
     page={resolvedSearchParams?.page}
     filter={resolvedSearchParams?.filter}

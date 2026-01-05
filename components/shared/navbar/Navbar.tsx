@@ -6,6 +6,7 @@ import Theme from './Theme'
 import MobileNav from './MobileNav'
 import GlobalSearch from '../search/GlobalSearch'
 import MenubarComponent from '../Menubar'
+import WarningNotification from '../WarningNotification'
 const Navbar = () => {
   return (
     <nav className='flex-between background-light900_dark200 
@@ -34,16 +35,17 @@ const Navbar = () => {
             <Theme/>
             
             <SignedIn>
-            <UserButton afterSwitchSessionUrl="/"
-            appearance={{
-                elements: {
-                    avatarBox:'h-10 w-10'
-                },
-                variables: {
-                    colorPrimary: '#ff7000'
-                }
-            }}
-            />
+              <WarningNotification />
+              <UserButton afterSwitchSessionUrl="/"
+              appearance={{
+                  elements: {
+                      avatarBox:'h-10 w-10'
+                  },
+                  variables: {
+                      colorPrimary: '#ff7000'
+                  }
+              }}
+              />
             </SignedIn>
 
             <MobileNav/>

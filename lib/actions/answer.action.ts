@@ -8,6 +8,7 @@ import { revalidatePath } from "next/cache";
 import Interaction from "@/database/interaction.model";
 import User from "@/database/user.model";
 import { notifyUserByClerkId } from "../push-notifications";
+import Comment from "@/database/comment.model";
 
 export async function createAnswer(params: CreateAnswerParams) {
   try {
@@ -214,6 +215,7 @@ export async function deleteAnswer(params: DeleteAnswerParams) {
     await answer.deleteOne({ _id: answerId });
     await Question.updateMany({ _id: answer.question }, { $pull: { answers: answerId }});
     await Interaction.deleteMany({ answer: answerId });
+    await Comment.deleteMany({ answer: answerId }); // Delete associated comments
 
     revalidatePath(path);
   } catch (error) {

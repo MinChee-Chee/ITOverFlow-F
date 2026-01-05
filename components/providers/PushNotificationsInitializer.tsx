@@ -13,6 +13,7 @@ const PushNotificationsInitializer = () => {
     NonNullable<(typeof window)["PusherPushNotifications"]>["Client"]
   > | null>(null);
   const startPromiseRef = useRef<Promise<void> | null>(null);
+  const isStartedRef = useRef<boolean>(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -116,11 +117,13 @@ const PushNotificationsInitializer = () => {
         if (!startPromiseRef.current) {
           startPromiseRef.current = beamsClientRef.current.start().catch((error) => {
             startPromiseRef.current = null;
+            isStartedRef.current = false;
             throw error;
           });
         }
 
         await startPromiseRef.current;
+        isStartedRef.current = true;
 
         const interest = `user-${userId}`;
         await beamsClientRef.current.addDeviceInterest(interest);
@@ -150,13 +153,24 @@ const PushNotificationsInitializer = () => {
   }, [isSignedIn, scriptReady, userId]);
 
   useEffect(() => {
-    if (isSignedIn || !beamsClientRef.current) return;
+    // Only clear interests if user is signed out AND client has been successfully started
+    if (isSignedIn || !beamsClientRef.current || !isStartedRef.current) return;
 
+    // Clear device interests when user signs out
     beamsClientRef.current
       .clearDeviceInterests()
-      .catch((error: unknown) =>
-        console.error("Failed to clear Beams interests", error)
-      );
+      .then(() => {
+        isStartedRef.current = false;
+        console.info("Beams: cleared device interests");
+      })
+      .catch((error: unknown) => {
+        // Silently ignore "SDK not registered" errors (client may have been cleaned up already)
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        if (!errorMessage.includes('SDK not registered') && !errorMessage.includes('not registered with Beams')) {
+          console.error("Failed to clear Beams interests", error);
+        }
+        isStartedRef.current = false;
+      });
   }, [isSignedIn]);
 
   return null;

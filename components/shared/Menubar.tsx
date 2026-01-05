@@ -18,10 +18,40 @@ import {
 } from "@/components/ui/menubar"
 import { useUser } from "@clerk/nextjs"
 import Link from "next/link"
+import { useState, useEffect } from "react"
 
 export default function MenubarComponent() {
   const { user, isLoaded } = useUser()
   const userId = user?.id
+  const [isAdmin, setIsAdmin] = useState(false)
+  const [isModerator, setIsModerator] = useState(false)
+  const [roleLoading, setRoleLoading] = useState(true)
+
+  useEffect(() => {
+    if (!isLoaded) {
+      setRoleLoading(true)
+      return
+    }
+
+    const checkRoles = async () => {
+      try {
+        const response = await fetch("/api/auth/check-role")
+        if (response.ok) {
+          const data = await response.json()
+          setIsAdmin(data.isAdmin === true)
+          setIsModerator(data.isModerator === true)
+        }
+      } catch (error) {
+        console.error("Error checking roles:", error)
+        setIsAdmin(false)
+        setIsModerator(false)
+      } finally {
+        setRoleLoading(false)
+      }
+    }
+
+    checkRoles()
+  }, [isLoaded])
 
   return (
     <Menubar>
@@ -91,35 +121,38 @@ export default function MenubarComponent() {
       <MenubarMenu>
         <MenubarTrigger>Moderator</MenubarTrigger>
         <MenubarContent>
-          <MenubarCheckboxItem>Always Show Bookmarks Bar</MenubarCheckboxItem>
-          <MenubarCheckboxItem checked>
-            Always Show Full URLs
-          </MenubarCheckboxItem>
-          <MenubarSeparator />
-          <MenubarItem inset>
-            Reload <MenubarShortcut>⌘R</MenubarShortcut>
-          </MenubarItem>
-          <MenubarItem disabled inset>
-            Force Reload <MenubarShortcut>⇧⌘R</MenubarShortcut>
-          </MenubarItem>
-          <MenubarSeparator />
-          <MenubarItem inset>Toggle Fullscreen</MenubarItem>
-          <MenubarSeparator />
-          <MenubarItem inset>Hide Sidebar</MenubarItem>
+          {roleLoading ? (
+            <MenubarItem disabled>Loading...</MenubarItem>
+          ) : (isModerator || isAdmin) ? (
+            <>
+              <MenubarItem asChild>
+                <Link href="/moderator">Manage Chat Groups</Link>
+              </MenubarItem>
+              <MenubarItem asChild>
+                <Link href="/moderator/reports">View Reports</Link>
+              </MenubarItem>
+            </>
+          ) : (
+            <MenubarItem disabled>
+              You are not authorized to access this page.
+            </MenubarItem>
+          )}
         </MenubarContent>
       </MenubarMenu>
       <MenubarMenu>
         <MenubarTrigger>Admin</MenubarTrigger>
         <MenubarContent>
-          <MenubarRadioGroup value="benoit">
-            <MenubarRadioItem value="andy">Andy</MenubarRadioItem>
-            <MenubarRadioItem value="benoit">Benoit</MenubarRadioItem>
-            <MenubarRadioItem value="Luis">Luis</MenubarRadioItem>
-          </MenubarRadioGroup>
-          <MenubarSeparator />
-          <MenubarItem inset>Edit...</MenubarItem>
-          <MenubarSeparator />
-          <MenubarItem inset>Add Profile...</MenubarItem>
+          {roleLoading ? (
+            <MenubarItem disabled>Loading...</MenubarItem>
+          ) : isAdmin ? (
+            <MenubarItem asChild>
+              <Link href="/admin">Admin Dashboard</Link>
+            </MenubarItem>
+          ) : (
+            <MenubarItem disabled>
+              You are not authorized to access this page.
+            </MenubarItem>
+          )}
         </MenubarContent>
       </MenubarMenu>
     </Menubar>

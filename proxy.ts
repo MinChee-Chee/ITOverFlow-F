@@ -11,6 +11,8 @@ const isProtectedRoute = createRouteMatcher([
 const isPublicRoute = createRouteMatcher([
   '/api/webhooks(.*)', // Webhooks use signature verification, not user auth
   '/api/auth/check-role', // Check role endpoint should be accessible to check auth status
+  '/api/huggingface/tag-info', // Tag info endpoint should be public (no auth required)
+  '/api/google-gemini/tag-info', // Tag info endpoint should be public (no auth required)
   '/sign-in(.*)',
   '/sign-up(.*)',
 ]);
@@ -23,10 +25,9 @@ const isSandboxRoute = createRouteMatcher(['/api/sandbox(.*)']);
 const isWebhookRoute = createRouteMatcher(['/api/webhooks(.*)']);
 
 export default clerkMiddleware(async (auth, req: NextRequest) => {
-  // Early return for public routes (webhooks, sign-in, sign-up, check-role)
-  // Check both the route matcher and the path directly to ensure webhooks are excluded
+
   const pathname = req.nextUrl.pathname;
-  if (isPublicRoute(req) || pathname.startsWith('/api/webhooks') || pathname === '/api/auth/check-role') {
+  if (isPublicRoute(req) || pathname.startsWith('/api/webhooks') || pathname === '/api/auth/check-role' || pathname.startsWith('/api/huggingface/tag-info') || pathname.startsWith('/api/google-gemini/tag-info')) {
     return NextResponse.next();
   }
 
