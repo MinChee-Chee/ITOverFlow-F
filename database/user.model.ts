@@ -13,6 +13,8 @@ export interface IUser extends Document {
   reputation?: number;
   saved: Schema.Types.ObjectId[];
   joinedAt: Date;
+  termsAccepted?: boolean;
+  termsAcceptedAt?: Date;
 }
 
 const UserSchema = new Schema({
@@ -28,6 +30,8 @@ const UserSchema = new Schema({
   reputation: { type: Number, default: 0 },
   saved: [{ type: Schema.Types.ObjectId, ref: 'Question' }], 
   joinedAt: { type: Date, default: Date.now },
+  termsAccepted: { type: Boolean, default: false },
+  termsAcceptedAt: { type: Date },
 });
 
 // Add indexes for frequently queried fields

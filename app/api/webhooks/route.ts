@@ -78,6 +78,7 @@ export async function POST(req: Request) {
         username: username,
         email: email_addresses[0].email_address,
         picture: image_url,
+        termsAccepted: false, // New users must accept terms
       });
 
       console.log('User created in database:', mongoUser);

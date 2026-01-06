@@ -33,7 +33,7 @@ async function embedQuery(text: string) {
 
   if (!hfToken) {
     throw new Error(
-      "Missing Hugging Face API key. Set HUGGINGFACE_API_KEY (or HF_API_KEY) so we can embed queries for Chroma."
+      "AI embedding service is temporarily unavailable. The Hugging Face API key is not configured."
     );
   }
 
@@ -104,7 +104,35 @@ export async function POST(req: Request) {
       throw err;
     }
 
-    const embedding = await embedQuery(query);
+    let embedding;
+    try {
+      embedding = await embedQuery(query);
+    } catch (embedError: any) {
+      console.error('[Recommendation] Embedding error:', embedError);
+      const errorMessage = embedError?.message || 'Failed to process query';
+      
+      // Check if it's an API key issue
+      if (errorMessage.includes('API key') || errorMessage.includes('temporarily unavailable')) {
+        return NextResponse.json(
+          {
+            error: 'AI recommendation service is temporarily unavailable. Please try again later.',
+            code: 'SERVICE_UNAVAILABLE',
+            userMessage: 'We\'re unable to process your search query at the moment. The AI service may be experiencing issues. Please try again in a few moments.'
+          },
+          { status: 503 }
+        );
+      }
+      
+      // Generic embedding error
+      return NextResponse.json(
+        {
+          error: 'AI recommendation service is temporarily unavailable. Please try again later.',
+          code: 'EMBEDDING_ERROR',
+          userMessage: 'We encountered an issue while processing your search. Please try again in a few moments.'
+        },
+        { status: 503 }
+      );
+    }
 
     const results = await collection.query({
       queryEmbeddings: [embedding],

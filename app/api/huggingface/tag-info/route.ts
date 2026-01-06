@@ -18,9 +18,14 @@ export const POST = async (request: NextRequest) => {
       process.env.HUGGINGFACE_API_KEY || process.env.HF_API_KEY;
 
     if (!hfApiKey) {
+      // Return a user-friendly message instead of a technical error
       return NextResponse.json(
-        { error: "Hugging Face API key is not configured" },
-        { status: 500 }
+        { 
+          error: "AI summarization service is temporarily unavailable. Please try again later.",
+          code: "SERVICE_UNAVAILABLE",
+          userMessage: "We're unable to load tag information at the moment. This feature requires an API key to be configured."
+        },
+        { status: 503 } // Service Unavailable
       );
     }
 
@@ -236,9 +241,14 @@ export const POST = async (request: NextRequest) => {
     }
 
     if (!description) {
+      // Return a user-friendly message when all services fail
       return NextResponse.json(
-        { error: 'Failed to generate tag description. Hugging Face and Google Gemini APIs are unavailable. Please check your API keys and try again.' },
-        { status: 500 }
+        { 
+          error: 'AI summarization service is temporarily unavailable. Please try again later.',
+          code: 'SERVICE_UNAVAILABLE',
+          userMessage: 'We couldn\'t generate tag information at this time. The AI service may be experiencing high demand. Please try again in a few moments.'
+        },
+        { status: 503 } // Service Unavailable
       );
     }
 
@@ -249,12 +259,15 @@ export const POST = async (request: NextRequest) => {
   } catch (error: any) {
     console.error("[Tag Info] Error:", error);
 
+    // Return user-friendly error message
     return NextResponse.json(
       {
-        error:
-          error.message || "Failed to generate tag description",
+        error: "AI summarization service is temporarily unavailable. Please try again later.",
+        code: "SERVICE_ERROR",
+        userMessage: "We encountered an issue while generating tag information. Please try again in a few moments.",
+        details: process.env.NODE_ENV === 'development' ? error.message : undefined
       },
-      { status: 500 }
+      { status: 503 }
     );
   }
 };

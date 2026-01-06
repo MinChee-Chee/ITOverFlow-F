@@ -2,9 +2,10 @@ import LeftSidebar from '@/components/shared/LeftSidebar'
 import RightSidebar from '@/components/shared/RightSidebar'
 import Navbar from '@/components/shared/navbar/Navbar'
 import { Toaster } from '@/components/ui/toaster'
-import React from 'react'
+import React, { Suspense } from 'react'
 import Script from 'next/script'
 import PushNotificationsInitializer from '@/components/providers/PushNotificationsInitializer'
+import TermsChecker from '@/components/providers/TermsChecker'
 
 const Layout = ({ children }: { children: React.ReactNode }) => {
   return (
@@ -17,6 +18,9 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
         strategy="afterInteractive"
       />
       <PushNotificationsInitializer />
+      <Suspense fallback={null}>
+        <TermsChecker />
+      </Suspense>
       <Navbar />
       <div className="flex">
         <LeftSidebar />

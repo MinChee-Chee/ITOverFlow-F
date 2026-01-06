@@ -47,13 +47,30 @@ export async function updateUser(params: UpdateUserParams) {
 
     const { clerkId, updateData, path } = params;
 
-    await User.findOneAndUpdate({ clerkId }, updateData, {
-      new: true,
-    });
+    // First, find the user
+    const existingUser = await User.findOne({ clerkId });
+    if (!existingUser) {
+      throw new Error('User not found');
+    }
+
+    // Modify the document directly and save - this ensures the update is applied
+    Object.assign(existingUser, updateData);
+    
+    // Mark the fields as modified to ensure they're saved
+    existingUser.markModified('termsAccepted');
+    if (updateData.termsAcceptedAt) {
+      existingUser.markModified('termsAcceptedAt');
+    }
+
+    // Save the document
+    const savedUser = await existingUser.save();
 
     revalidatePath(path);
+    
+    // Return the saved user
+    return savedUser;
   } catch (error) {
-    console.log(error);
+    console.error('[updateUser] Error:', error);
     throw error;
   }
 }

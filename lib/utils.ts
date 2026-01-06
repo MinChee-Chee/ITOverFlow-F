@@ -271,3 +271,43 @@ export const calculateSimilarityFromDistance = (
     return Math.max(0, Math.min(100, 100 * Math.exp(-distance / 2)));
   }
 };
+
+/**
+ * Format ban time remaining in a human-readable string
+ * @param expiresAt - The expiration date/time of the ban
+ * @returns Formatted string like "2 days and 5 hours" or "3 hours", or null if invalid
+ */
+export const formatBanTimeRemaining = (expiresAt: string | Date | null | undefined): string | null => {
+  if (!expiresAt) return null;
+  
+  try {
+    const expires = new Date(expiresAt);
+    const now = new Date();
+    const hoursRemaining = Math.ceil((expires.getTime() - now.getTime()) / (1000 * 60 * 60));
+    
+    if (hoursRemaining <= 0) return 'Your ban will expire soon.';
+    
+    const days = Math.floor(hoursRemaining / 24);
+    const hours = hoursRemaining % 24;
+    
+    if (days > 0) {
+      return `${days} day${days !== 1 ? 's' : ''} and ${hours} hour${hours !== 1 ? 's' : ''}`;
+    }
+    return `${hoursRemaining} hour${hoursRemaining !== 1 ? 's' : ''}`;
+  } catch {
+    return null;
+  }
+};
+
+/**
+ * Get ban error message with formatted time remaining
+ * @param expiresAt - The expiration date/time of the ban
+ * @returns Error message string
+ */
+export const getBanErrorMessage = (expiresAt: string | Date | null | undefined): string => {
+  const timeRemaining = formatBanTimeRemaining(expiresAt);
+  if (!timeRemaining) {
+    return 'You have been banned from this chat group for 2 days due to a violation of the community guidelines.';
+  }
+  return `You have been banned from this chat group for 2 days due to a violation of the community guidelines. The ban will expire in ${timeRemaining}.`;
+};

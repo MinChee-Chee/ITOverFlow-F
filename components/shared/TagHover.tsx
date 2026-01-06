@@ -38,17 +38,37 @@ export default function TagHover({ _id, name, children, questions }: TagHoverPro
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || 'Failed to fetch tag information');
+        
+        // Use user-friendly message if available, otherwise use the error message
+        const errorMessage = errorData.userMessage || errorData.error || 'Failed to fetch tag information';
+        
+        // Check if it's a service unavailable error
+        if (response.status === 503 || errorData.code === 'SERVICE_UNAVAILABLE' || errorData.code === 'SERVICE_ERROR') {
+          setError('AI service is temporarily unavailable. Please try again later.');
+        } else {
+          setError(errorMessage);
+        }
+        return; // Don't throw, just set error state
       }
 
       const data = await response.json();
       if (data.description) {
         setTagDescription(data.description);
       } else {
-        throw new Error('No description received');
+        setError('Unable to generate tag description at this time. Please try again later.');
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load tag information');
+      // Handle network errors and other exceptions
+      const errorMessage = err instanceof Error ? err.message : 'Failed to load tag information';
+      
+      if (errorMessage.includes('fetch') || errorMessage.includes('network') || errorMessage.includes('Failed to fetch')) {
+        setError('Unable to connect to the AI service. Please check your internet connection and try again.');
+      } else if (errorMessage.includes('API') || errorMessage.includes('service') || errorMessage.includes('unavailable')) {
+        setError('AI service is temporarily unavailable. Please try again later.');
+      } else {
+        setError('Unable to load tag information at this time. Please try again later.');
+      }
+      
       console.error('Error fetching tag info:', err);
     } finally {
       setIsLoading(false);
@@ -92,9 +112,14 @@ export default function TagHover({ _id, name, children, questions }: TagHoverPro
                   <span>Loading...</span>
                 </div>
               ) : error ? (
-                <p className="text-sm text-red-500 dark:text-red-400 break-words leading-relaxed">
-                  {error}
-                </p>
+                <div className="text-sm break-words leading-relaxed">
+                  <p className="text-amber-600 dark:text-amber-400 mb-1 font-medium">
+                    Service Unavailable
+                  </p>
+                  <p className="text-dark400_light700">
+                    {error}
+                  </p>
+                </div>
               ) : tagDescription ? (
                 <p className="text-sm text-dark200_light900 leading-relaxed break-words whitespace-pre-wrap">
                   {tagDescription}

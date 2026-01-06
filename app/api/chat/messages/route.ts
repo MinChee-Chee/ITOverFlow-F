@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
-import { sendMessage, getMessages } from '@/lib/actions/chat.action';
+import { sendMessage, getMessages, isUserBannedFromChatGroup } from '@/lib/actions/chat.action';
 import { getUserById } from '@/lib/actions/user.action';
 import { triggerPusherEvent } from '@/lib/pusher-channels';
 import { validateAndSanitizeBody } from '@/lib/middleware/validation';
+import { validateMessageContent } from '@/lib/content-moderation';
 import { z } from 'zod';
 import { commonSchemas } from '@/lib/middleware/validation';
 
@@ -35,6 +36,20 @@ export async function POST(req: NextRequest) {
 
       const { content, chatGroupId } = validation.data;
 
+      // Content moderation: Check for abusive or inappropriate content
+      const contentValidation = validateMessageContent(content);
+      if (!contentValidation.valid) {
+        clearTimeout(timeoutId);
+        return NextResponse.json(
+          { 
+            error: contentValidation.error || 'Message contains inappropriate content',
+            code: 'CONTENT_MODERATION',
+            severity: contentValidation.severity,
+          },
+          { status: 400 }
+        );
+      }
+
       // Get user from database
       const user = await getUserById({ userId });
       if (!user) {
@@ -50,21 +65,21 @@ export async function POST(req: NextRequest) {
       });
 
       // Broadcast message via Pusher Channels
-      // Ensure all ObjectIds are converted to strings
+      // Ensure all ObjectIds are converted to strings and dates are ISO strings
       const messageData = {
-        _id: typeof message._id === 'object' && message._id !== null ? String(message._id) : message._id,
+        _id: String(message._id),
         content: message.content,
-        author: typeof message.author === 'object' && message.author !== null 
-          ? (typeof message.author._id === 'object' 
-            ? { ...message.author, _id: String(message.author._id) }
-            : message.author)
-          : message.author,
-        chatGroup: typeof message.chatGroup === 'object' && message.chatGroup !== null 
-          ? String(message.chatGroup) 
-          : message.chatGroup,
+        author: {
+          _id: String(message.author?._id || message.author),
+          clerkId: message.author?.clerkId || '',
+          name: message.author?.name || '',
+          picture: message.author?.picture || '',
+          username: message.author?.username || '',
+        },
+        chatGroup: String(message.chatGroup || chatGroupId),
         createdAt: message.createdAt instanceof Date 
           ? message.createdAt.toISOString() 
-          : message.createdAt,
+          : (typeof message.createdAt === 'string' ? message.createdAt : new Date().toISOString()),
       };
 
       const triggerResult = await triggerPusherEvent({
@@ -101,6 +116,7 @@ export async function POST(req: NextRequest) {
 
 export async function GET(req: NextRequest) {
   try {
+    const { userId } = await auth();
     const { searchParams } = new URL(req.url);
     const chatGroupId = searchParams.get('chatGroupId');
     const page = Math.max(1, parseInt(searchParams.get('page') || '1'));
@@ -110,13 +126,31 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Valid chatGroupId is required' }, { status: 400 });
     }
 
+    // Get user from database if authenticated (single lookup for both ban check and userId)
+    let banStatus = { banned: false };
+    let userDbId: string | undefined;
+    if (userId) {
+      const user = await getUserById({ userId });
+      if (user) {
+        userDbId = user._id.toString();
+        // Check ban status (userDbId is guaranteed to be string here)
+        if (userDbId) {
+          banStatus = await isUserBannedFromChatGroup(chatGroupId, userDbId);
+        }
+      }
+    }
+
     const result = await getMessages({
       chatGroupId,
       page,
       pageSize,
+      userId: userDbId,
     });
 
-    return NextResponse.json(result);
+    return NextResponse.json({
+      ...result,
+      banStatus,
+    });
   } catch (error) {
     console.error('Error getting messages:', error);
     return NextResponse.json(
