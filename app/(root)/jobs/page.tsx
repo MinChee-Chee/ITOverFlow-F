@@ -39,7 +39,7 @@ export default function Jobs() {
             title="Error loading jobs"
             description="Failed to fetch jobs. Please try refreshing the page."
             link="/"
-            linkTitle="Back to DevOverflow"
+            linkTitle="Back to IT Overflow"
           />
         </div>
       </>
@@ -107,7 +107,7 @@ export default function Jobs() {
             title="There's no jobs to show"
             description="No jobs found right now, but don't worry! New opportunities are posted regularly. Please check back soon."
             link="/"
-            linkTitle="Back to DevOverflow"
+            linkTitle="Back to IT Overflow"
           />
         )}
       </div>

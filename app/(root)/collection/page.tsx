@@ -13,8 +13,8 @@ import { Suspense } from "react";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Saved Questions | Dev Overflow for HCMUTE future engineers",
-  description: "saved questions on Dev Overflow",
+  title: "Saved Questions | IT Overflow for HCMUTE future engineers",
+  description: "saved questions on IT Overflow",
 }
 
 export const dynamic = 'force-dynamic';

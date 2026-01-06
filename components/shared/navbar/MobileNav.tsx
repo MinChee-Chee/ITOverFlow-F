@@ -60,7 +60,7 @@ const MobileNav = () => {
                 src="/assets/images/site-logo.svg"
                 width={25}
                 height={25}
-                alt='DevOverFlow'    
+                alt='IT Overflow'    
             />
 
             <p
