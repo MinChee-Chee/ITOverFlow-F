@@ -15,8 +15,8 @@ import type { Metadata } from "next";
 import { auth } from "@clerk/nextjs/server";
 
 export const metadata: Metadata = {
-  title: "Home | Dev Overflow for HCMUTE future engineers",
-  description: "Dev Overflow is a community of developers, engineers, and future engineers who are passionate about learning and sharing knowledge.",
+  title: "Home | IT Overflow for HCMUTE future engineers",
+  description: "IT Overflow is a community of developers, engineers, and future engineers who are passionate about learning and sharing knowledge.",
 }
 
 // Enable partial prerendering for better performance

@@ -12,8 +12,8 @@ import { Suspense } from 'react'
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Dev Overflow | Tags",
-  description: "Tags on Dev Overflow",
+  title: "IT Overflow | Tags",
+  description: "Tags on IT Overflow",
 }
 
 export const dynamic = 'force-dynamic';

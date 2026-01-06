@@ -8,7 +8,7 @@ import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "Ask a question",
-  description: "Ask a question on DevOverFlow",
+  description: "Ask a question on IT Overflow",
 }
 
 export const dynamic = 'force-dynamic';
