@@ -31,7 +31,9 @@ const Navbar = () => {
         </Suspense>
 
         <div className='flex-between gap-5'>
-            <MenubarComponent/>
+            <div className="hidden sm:flex">
+              <MenubarComponent/>
+            </div>
             <Theme/>
             
             <SignedIn>
