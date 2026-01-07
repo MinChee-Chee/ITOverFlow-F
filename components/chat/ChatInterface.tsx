@@ -659,7 +659,7 @@ export default function ChatInterface({ chatGroupId }: ChatInterfaceProps) {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-full">
-        <p className="text-muted-foreground">Loading messages...</p>
+        <p className="text-dark-400 dark:text-light-700">Loading messages...</p>
       </div>
     );
   }
@@ -674,7 +674,7 @@ export default function ChatInterface({ chatGroupId }: ChatInterfaceProps) {
       case 'error':
         return 'bg-red-500';
       default:
-        return 'bg-gray-500';
+        return 'bg-light-500 dark:bg-light-500';
     }
   };
 
@@ -702,24 +702,24 @@ export default function ChatInterface({ chatGroupId }: ChatInterfaceProps) {
   return (
     <div className="flex flex-col h-full">
       {/* Connection Status Indicator */}
-      <div className="px-4 py-2 border-b flex items-center gap-2 text-xs">
+      <div className="px-4 py-2 border-b border-light-700 dark:border-dark-400 flex items-center gap-2 text-xs">
         <div className={`w-2 h-2 rounded-full ${getConnectionStatusColor()}`} />
-        <span className="text-muted-foreground">{getConnectionStatusText()}</span>
+        <span className="text-dark-400 dark:text-light-700">{getConnectionStatusText()}</span>
       </div>
 
       {/* Ban Notice */}
       {banStatus?.banned && (
-        <div className="px-4 py-4 bg-destructive/10 border-b border-destructive/20">
+        <div className="px-4 py-4 bg-red-50 dark:bg-red-900/20 border-b border-red-200 dark:border-red-800">
           <div className="flex items-start gap-3">
-            <div className="flex-shrink-0 w-2 h-2 rounded-full bg-destructive mt-2" />
+            <div className="flex-shrink-0 w-2 h-2 rounded-full bg-red-500 dark:bg-red-400 mt-2" />
             <div className="flex-1">
-              <p className="text-sm font-semibold text-destructive mb-1">
+              <p className="text-sm font-semibold text-red-600 dark:text-red-400 mb-1">
                 You have been banned from this chat group
               </p>
-              <p className="text-xs text-muted-foreground mb-2">
+              <p className="text-xs text-dark-400 dark:text-light-700 mb-2">
                 You have been banned for 2 days due to a violation of the community guidelines.
               </p>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs text-dark-400 dark:text-light-700">
                 {(() => {
                   const timeRemaining = getBanTimeRemaining();
                   if (timeRemaining) {
@@ -736,7 +736,7 @@ export default function ChatInterface({ chatGroupId }: ChatInterfaceProps) {
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {messages.length === 0 ? (
           <div className="flex items-center justify-center h-full">
-            <p className="text-muted-foreground">No messages yet. Start the conversation!</p>
+            <p className="text-dark-400 dark:text-light-700">No messages yet. Start the conversation!</p>
           </div>
         ) : (
           messages.map((message) => {
@@ -758,15 +758,15 @@ export default function ChatInterface({ chatGroupId }: ChatInterfaceProps) {
                 </div>
                 <div className={`flex flex-col ${isUser ? 'items-end' : 'items-start'} max-w-[70%]`}>
                   <div className={`flex items-center gap-2 mb-1 ${isUser ? 'flex-row-reverse' : 'flex-row'}`}>
-                    <span className="text-sm font-medium">{message.author.name}</span>
-                    <span className="text-xs text-muted-foreground">
+                    <span className="text-sm font-medium text-dark-200 dark:text-light-800">{message.author.name}</span>
+                    <span className="text-xs text-dark-400 dark:text-light-700">
                       {formatTime(message.createdAt)}
                     </span>
                     {isUser && (
                       <button
                         onClick={() => handleDeleteMessage(message._id)}
                         disabled={deletingMessageId === message._id}
-                        className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-destructive/10 disabled:opacity-50 cursor-pointer"
+                        className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-50 cursor-pointer"
                         title="Delete message"
                         aria-label="Delete message"
                       >
@@ -789,8 +789,8 @@ export default function ChatInterface({ chatGroupId }: ChatInterfaceProps) {
                   <div
                     className={`rounded-lg px-4 py-2 ${
                       isUser
-                        ? 'bg-primary text-primary-foreground'
-                        : 'bg-muted text-foreground'
+                        ? 'bg-primary-500 text-white'
+                        : 'bg-light-800 dark:bg-dark-400 text-dark-200 dark:text-light-800'
                     }`}
                   >
                     <p className="text-sm whitespace-pre-wrap break-words">
@@ -805,10 +805,10 @@ export default function ChatInterface({ chatGroupId }: ChatInterfaceProps) {
         <div ref={messagesEndRef} />
       </div>
       
-      <form onSubmit={handleSendMessage} className="p-4 border-t">
+      <form onSubmit={handleSendMessage} className="p-4 border-t border-light-700 dark:border-dark-400">
         <div className="flex flex-col gap-2">
           {validationError && (
-            <div className="text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-md px-3 py-2">
+            <div className="text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md px-3 py-2">
               {validationError}
             </div>
           )}
@@ -842,7 +842,7 @@ export default function ChatInterface({ chatGroupId }: ChatInterfaceProps) {
               }}
               placeholder={banStatus?.banned ? "You are banned from this chat group" : "Type your message..."}
               rows={2}
-              className={`resize-none ${validationError ? 'border-destructive focus-visible:ring-destructive' : ''}`}
+              className={`resize-none ${validationError ? 'border-red-500 dark:border-red-400 focus-visible:ring-red-500' : ''}`}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
                   e.preventDefault();

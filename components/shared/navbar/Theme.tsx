@@ -15,7 +15,7 @@ import Image from 'next/image'
 import { themes } from '@/constants'
 
 const Theme = () => {
-    const {mode, setMode} = useTheme();
+    const {mode, setMode, resolvedMode} = useTheme();
     const [mounted, setMounted] = useState(false);
 
     // Prevent hydration mismatch by only rendering theme-dependent content after mount
@@ -23,10 +23,10 @@ const Theme = () => {
         setMounted(true);
     }, []);
 
-    // Determine which icon to show - default to light during SSR
+    // Determine which icon to show - use resolvedMode for actual theme, mode for selection
     const iconSrc = !mounted 
         ? '/assets/icons/sun.svg' 
-        : mode === 'light' 
+        : resolvedMode === 'light' 
             ? '/assets/icons/sun.svg' 
             : '/assets/icons/moon.svg';
     
@@ -38,7 +38,7 @@ const Theme = () => {
     <Menubar className="relative border-none bg-transparent shadow-none">
     <MenubarMenu>
         <MenubarTrigger 
-            className="focus:bg-light-900 data-[state=open]:bg-light-900 dark:focus:bg-dark-200 dark:data-[state=open]:bg-dark-200"
+            className="text-dark-200 dark:text-light-800 focus:bg-light-900 data-[state=open]:bg-light-900 dark:focus:bg-dark-200 dark:data-[state=open]:bg-dark-200"
             suppressHydrationWarning
         > 
             <Image
@@ -56,13 +56,7 @@ const Theme = () => {
                 key={item.value}
                 className="flex cursor-pointer items-center gap-4 px-2.5 py-2 focus:bg-light-800 dark:focus:bg-dark-400"
                 onClick={() => {
-                    setMode(item.value)
-
-                    if(item.value !== 'system') {
-                        localStorage.theme = item.value
-                    } else {
-                        localStorage.removeItem('theme');
-                    }
+                    setMode(item.value);
                 }}>
                     <Image 
                     src={item.icon}

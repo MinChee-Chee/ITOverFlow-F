@@ -152,7 +152,7 @@ export default function TermsAgreementDialog({
         </DialogHeader>
 
         <div className="space-y-4 py-4">
-          <div className="text-sm text-muted-foreground space-y-2">
+          <div className="text-sm text-dark-400 dark:text-light-700 space-y-2">
             <p>
               We've updated our Terms of Use to better serve our community. These terms cover:
             </p>

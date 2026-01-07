@@ -250,7 +250,7 @@ export default function EditChatGroupDialog({ chatGroup, onGroupUpdated }: EditC
                   })}
                 </div>
               )}
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-dark-400 dark:text-light-700">
                 Select up to 4 tags to identify this chat group.
               </p>
             </div>

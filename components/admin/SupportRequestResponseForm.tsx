@@ -126,7 +126,7 @@ export default function SupportRequestResponseForm({
           maxLength={5000}
           required={!hasResponse}
         />
-        <p className="text-xs text-muted-foreground">
+        <p className="text-xs text-dark-400 dark:text-light-700">
           {response.length}/5000 characters
         </p>
       </div>

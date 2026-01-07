@@ -207,7 +207,7 @@ export default function SupportRequestsList({
 
       {loading ? (
         <div className="text-center py-10">
-          <p className="text-muted-foreground">Loading support requests...</p>
+          <p className="text-dark-400 dark:text-light-700">Loading support requests...</p>
         </div>
       ) : supportRequests.length === 0 ? (
         <NoResult
@@ -243,11 +243,11 @@ export default function SupportRequestsList({
                         >
                           {request.userId.name}
                         </Link>
-                        <span className="text-sm text-muted-foreground">
+                        <span className="text-sm text-dark-400 dark:text-light-700">
                           @{request.userId.username}
                         </span>
                       </div>
-                      <p className="text-sm text-muted-foreground">
+                      <p className="text-sm text-dark-400 dark:text-light-700">
                         {request.userId.email}
                       </p>
                     </div>
@@ -276,7 +276,7 @@ export default function SupportRequestsList({
                     <div className="flex items-center gap-2 mb-2">
                       <span className="text-sm font-semibold">Admin Response:</span>
                       {request.respondedBy && (
-                        <span className="text-sm text-muted-foreground">
+                        <span className="text-sm text-dark-400 dark:text-light-700">
                           by {request.respondedBy.name}
                         </span>
                       )}
@@ -285,7 +285,7 @@ export default function SupportRequestsList({
                       {request.adminResponse}
                     </p>
                     {request.respondedAt && (
-                      <p className="text-xs text-muted-foreground mt-2">
+                      <p className="text-xs text-dark-400 dark:text-light-700 mt-2">
                         Responded: {formatDate(request.respondedAt)}
                       </p>
                     )}
@@ -293,7 +293,7 @@ export default function SupportRequestsList({
                 )}
 
                 <div className="flex items-center justify-between pt-2 border-t">
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-xs text-dark-400 dark:text-light-700">
                     Submitted: {formatDate(request.createdAt)}
                   </p>
                   <Button asChild variant="outline" size="sm">

@@ -93,18 +93,18 @@ export default function SupportRequestForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6 rounded-lg border p-6">
+    <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6 rounded-lg border p-4 sm:p-6">
       <div>
-        <h3 className="h3-semibold mb-2">Submit a Support Request</h3>
-        <p className="text-sm text-muted-foreground">
+        <h3 className="h3-semibold text-[18px] sm:text-[20px] mb-2">Submit a Support Request</h3>
+        <p className="text-xs sm:text-sm text-dark-400 dark:text-light-700">
           Fill out the form below and we'll get back to you as soon as possible.
         </p>
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="category">Category *</Label>
+        <Label htmlFor="category" className="text-sm sm:text-base">Category *</Label>
         <Select value={category} onValueChange={(value: any) => setCategory(value)}>
-          <SelectTrigger id="category">
+          <SelectTrigger id="category" className="h-10 sm:h-11">
             <SelectValue placeholder="Select a category" />
           </SelectTrigger>
           <SelectContent>
@@ -119,7 +119,7 @@ export default function SupportRequestForm() {
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="subject">Subject *</Label>
+        <Label htmlFor="subject" className="text-sm sm:text-base">Subject *</Label>
         <Input
           id="subject"
           value={subject}
@@ -127,24 +127,26 @@ export default function SupportRequestForm() {
           placeholder="Brief description of your issue"
           maxLength={200}
           required
+          className="text-sm sm:text-base"
         />
-        <p className="text-xs text-muted-foreground">
+        <p className="text-xs text-dark-400 dark:text-light-700">
           {subject.length}/200 characters
         </p>
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="message">Message *</Label>
+        <Label htmlFor="message" className="text-sm sm:text-base">Message *</Label>
         <Textarea
           id="message"
           value={message}
           onChange={(e) => setMessage(e.target.value)}
           placeholder="Please provide detailed information about your issue or question..."
-          rows={6}
+          rows={5}
+          className="min-h-[120px] sm:min-h-[150px] text-sm sm:text-base resize-y"
           maxLength={5000}
           required
         />
-        <p className="text-xs text-muted-foreground">
+        <p className="text-xs text-dark-400 dark:text-light-700">
           {message.length}/5000 characters
         </p>
       </div>
@@ -152,7 +154,7 @@ export default function SupportRequestForm() {
       <Button
         type="submit"
         disabled={isSubmitting || !subject.trim() || !message.trim()}
-        className="w-full"
+        className="w-full h-10 sm:h-11 text-sm sm:text-base"
       >
         {isSubmitting ? 'Submitting...' : 'Submit Support Request'}
       </Button>

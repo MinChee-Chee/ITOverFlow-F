@@ -97,7 +97,7 @@ export default function ReportChatMessageButton({ messageId, userId }: ReportCha
         <Button
           variant="ghost"
           size="sm"
-          className="flex items-center gap-1 text-xs text-muted-foreground hover:text-destructive"
+          className="flex items-center gap-1 text-xs text-dark-400 dark:text-light-700 hover:text-red-500 dark:hover:text-red-400"
           onClick={(e) => e.stopPropagation()}
         >
           <Flag className="h-3 w-3" />
@@ -124,7 +124,7 @@ export default function ReportChatMessageButton({ messageId, userId }: ReportCha
                 required
                 disabled={isLoading}
               />
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-dark-400 dark:text-light-700">
                 Be specific and provide details to help moderators understand the issue.
               </p>
             </div>
