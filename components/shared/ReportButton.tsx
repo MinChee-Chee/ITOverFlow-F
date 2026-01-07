@@ -135,7 +135,7 @@ export default function ReportButton({ type, questionId, answerId, commentId, us
                 required
                 disabled={isLoading}
               />
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-dark-400 dark:text-light-700">
                 Be specific and provide details to help moderators understand the issue.
               </p>
             </div>

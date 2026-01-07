@@ -204,7 +204,7 @@ export default function WarningNotification() {
           </DialogHeader>
           <div className="space-y-4 py-4">
             {warnings.length === 0 ? (
-              <p className="text-center text-muted-foreground py-8">
+              <p className="text-center text-dark-400 dark:text-light-700 py-8">
                 No warnings. You're all clear! 
               </p>
             ) : (
@@ -223,7 +223,7 @@ export default function WarningNotification() {
                           <div className="flex-1">
                             <div className="flex items-center gap-2 mb-2">
                               <Badge variant="destructive">Unread</Badge>
-                              <span className="text-sm text-muted-foreground">
+                              <span className="text-sm text-dark-400 dark:text-light-700">
                                 <ClientTimestamp createdAt={warning.createdAt} />
                               </span>
                             </div>
@@ -236,7 +236,7 @@ export default function WarningNotification() {
                               Reason: {warning.reason}
                             </p>
                             <p className="text-sm">{warning.message}</p>
-                            <p className="text-xs text-muted-foreground mt-2">
+                            <p className="text-xs text-dark-400 dark:text-light-700 mt-2">
                               Issued by: {warning.moderator.name}
                             </p>
                           </div>
@@ -256,19 +256,19 @@ export default function WarningNotification() {
                 {warnings.filter(w => w.isRead).length > 0 && (
                   <div className="space-y-3">
                     {unreadWarnings.length > 0 && <div className="border-t pt-4 mt-4"></div>}
-                    <p className="text-sm font-semibold text-muted-foreground">
+                    <p className="text-sm font-semibold text-dark-400 dark:text-light-700">
                       Read Warnings ({warnings.filter(w => w.isRead).length})
                     </p>
                     {warnings.filter(w => w.isRead).map((warning) => (
                       <div
                         key={warning._id}
-                        className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 bg-gray-50 dark:bg-gray-800/50"
+                        className="border border-light-700 dark:border-dark-400 rounded-lg p-4 bg-light-800 dark:bg-dark-400"
                       >
                         <div className="flex items-start justify-between mb-2">
                           <div className="flex-1">
                             <div className="flex items-center gap-2 mb-2">
                               <Badge variant="secondary">Read</Badge>
-                              <span className="text-sm text-muted-foreground">
+                              <span className="text-sm text-dark-400 dark:text-light-700">
                                 <ClientTimestamp createdAt={warning.createdAt} />
                               </span>
                             </div>
@@ -281,7 +281,7 @@ export default function WarningNotification() {
                               Reason: {warning.reason}
                             </p>
                             <p className="text-sm">{warning.message}</p>
-                            <p className="text-xs text-muted-foreground mt-2">
+                            <p className="text-xs text-dark-400 dark:text-light-700 mt-2">
                               Issued by: {warning.moderator.name}
                             </p>
                           </div>

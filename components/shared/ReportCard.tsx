@@ -133,9 +133,9 @@ export default function ReportCard({ report }: ReportCardProps) {
       case 'resolved':
         return 'bg-green-500/10 text-green-500 border-green-500/20'
       case 'dismissed':
-        return 'bg-gray-500/10 text-gray-500 border-gray-500/20'
+        return 'bg-light-800 dark:bg-dark-400 text-dark-400 dark:text-light-700 border-light-700 dark:border-dark-400'
       default:
-        return 'bg-gray-500/10 text-gray-500 border-gray-500/20'
+        return 'bg-light-800 dark:bg-dark-400 text-dark-400 dark:text-light-700 border-light-700 dark:border-dark-400'
     }
   }
 
@@ -792,7 +792,7 @@ export default function ReportCard({ report }: ReportCardProps) {
                 required
                 disabled={isDeleting}
               />
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-dark-400 dark:text-light-700">
                 This message will be displayed to the author when they log in.
               </p>
             </div>

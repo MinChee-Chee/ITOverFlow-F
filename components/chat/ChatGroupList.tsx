@@ -166,7 +166,7 @@ export default function ChatGroupList({ selectedGroupId, onGroupSelect }: ChatGr
   if (isLoading) {
     return (
       <div className="flex items-center justify-center p-8">
-        <p className="text-muted-foreground">Loading chat groups...</p>
+        <p className="text-dark-400 dark:text-light-700">Loading chat groups...</p>
       </div>
     );
   }
@@ -208,7 +208,7 @@ export default function ChatGroupList({ selectedGroupId, onGroupSelect }: ChatGr
       <div className="flex-1 overflow-y-auto">
         {filteredGroups.length === 0 ? (
           <div className="flex items-center justify-center p-8">
-            <p className="text-muted-foreground">
+            <p className="text-dark-400 dark:text-light-700">
               {filter === 'joined' ? 'No joined rooms found' : 'No chat groups found'}
             </p>
           </div>
@@ -244,11 +244,11 @@ export default function ChatGroupList({ selectedGroupId, onGroupSelect }: ChatGr
                         )}
                       </div>
                       {(group.hasUnread && group.lastMessageSnippet) ? (
-                        <p className="text-sm text-muted-foreground line-clamp-2">
+                        <p className="text-sm text-dark-400 dark:text-light-700 line-clamp-2">
                           {group.lastMessageSnippet}
                         </p>
                       ) : group.description && (
-                        <p className="text-sm text-muted-foreground line-clamp-2">
+                        <p className="text-sm text-dark-400 dark:text-light-700 line-clamp-2">
                           {group.description}
                         </p>
                       )}
@@ -263,7 +263,7 @@ export default function ChatGroupList({ selectedGroupId, onGroupSelect }: ChatGr
                           />
                         ))}
                       </div>
-                      <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                      <div className="flex items-center gap-4 text-xs text-dark-400 dark:text-light-700">
                         <span>{group.members.length} members</span>
                         <span>Mod: {group.moderator.name}</span>
                       </div>

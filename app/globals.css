@@ -6,6 +6,7 @@
 
 body {
   font-family: var(--font-inter);
+  @apply bg-light-850 dark:bg-dark-100;
 }
 
 @layer utilities {

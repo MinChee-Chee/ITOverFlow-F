@@ -58,7 +58,7 @@ export default function RootLayout({
             }}
           />
         </head>
-        <body className={`${inter.className} ${spaceGrotesk.className}`}>
+        <body className={`${inter.className} ${spaceGrotesk.className} background-light850_dark100`}>
         <ClerkProvider
           appearance={{
             elements: {
