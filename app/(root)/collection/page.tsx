@@ -13,7 +13,7 @@ import { Suspense } from "react";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Saved Questions | IT Overflow for HCMUTE future engineers",
+  title: "Saved Questions | IT Overflow",
   description: "saved questions on IT Overflow",
 }
 

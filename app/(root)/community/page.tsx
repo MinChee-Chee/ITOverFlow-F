@@ -11,8 +11,8 @@ import { Suspense } from 'react'
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Community | Meet amazing developers from HCMUTE",
-  description: "Community of HCMUTE future engineers",
+  title: "Community | IT Overflow",
+  description: "Community of developers and engineers on IT Overflow",
 }
 
 export const dynamic = 'force-dynamic';
