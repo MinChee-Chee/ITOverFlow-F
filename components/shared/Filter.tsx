@@ -29,7 +29,6 @@ const Filter = memo(({filters, otherClasses, containerClasses}:(Props)) => {
     const searchParamsRef = useRef(searchParams);
     const pathnameRef = useRef(pathname);
 
-    // Update refs when they change (but don't trigger re-renders)
     useEffect(() => {
         searchParamsRef.current = searchParams;
         pathnameRef.current = pathname;
@@ -38,12 +37,10 @@ const Filter = memo(({filters, otherClasses, containerClasses}:(Props)) => {
     const paramFilter = searchParams.get('filter');
 
     const handleUpdateParams = useCallback((value: string) => {
-        // Only update if value actually changed
         if (value === paramFilter) {
             return
         }
         
-        // Create new params and reset page to 1 when filter changes
         const params = new URLSearchParams(searchParamsRef.current.toString())
         params.set('filter', value)
         params.set('page', '1')

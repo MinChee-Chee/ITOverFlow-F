@@ -25,7 +25,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Get Pinecone credentials from environment
     const assistantId = process.env.PINECONE_ASSISTANT_ID;
     const apiKey = process.env.PINECONE_API_KEY;
 
@@ -36,22 +35,16 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Initialize Pinecone client
     const pc = new Pinecone({ apiKey: apiKey });
     const assistant = pc.assistant(assistantId);
     
-    // Call Pinecone assistant chat
     const chatResp = await assistant.chat({
       messages: messages,
       model: model,
     });
 
-    // Save chat history to database
     await connectToDatabase();
 
-    // Prepare history data with the full conversation
-    // Pinecone ChatModel uses camelCase: { id, model, usage, message: { content, role }, finishReason, citations }
-    // Type assertion needed as TypeScript types may not match runtime structure
     const chatRespAny = chatResp as any;
     const assistantContent = chatRespAny.message?.content || chatRespAny.content || '';
     const assistantCitations = chatResp.citations || [];
@@ -72,8 +65,6 @@ export async function POST(req: NextRequest) {
 
     await ChatAIHistory.create(historyData);
 
-    // Return response in the format expected by the frontend
-    // Convert camelCase to snake_case for API consistency
     return NextResponse.json({
       id: chatResp.id || `chat_${Date.now()}`,
       model: chatResp.model || model,

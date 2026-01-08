@@ -108,10 +108,10 @@ const DEFAULT_JS = `document.addEventListener('DOMContentLoaded', () => {
 
   clickBtn.addEventListener('click', function() {
     const messages = [
-      '🎉 JavaScript executed successfully!',
-      '🤖 Console.log() and DOM manipulation work!',
-      '✨ The sandbox is fully functional!',
-      '🚀 Write your own logic here!'
+      'JavaScript executed successfully!',
+      'Console.log() and DOM manipulation work!',
+      'The sandbox is fully functional!',
+      'Write your own logic here!'
     ];
     
     // Choose a random message

@@ -28,7 +28,6 @@ export default async function AdminDashboard(params: {
   const page = Number(searchParams.page) || 1
   const filter = searchParams.filter || 'new_users'
 
-  // Fetch users from database
   const { users, isNext } = await getAllUsers({
     searchQuery: query,
     filter,
@@ -36,7 +35,6 @@ export default async function AdminDashboard(params: {
     pageSize: 10,
   })
 
-  // Convert Mongoose documents to plain objects
   const plainUsers = users.map((user) => ({
     _id: user._id.toString(),
     clerkId: user.clerkId,
@@ -51,22 +49,17 @@ export default async function AdminDashboard(params: {
     joinedAt: user.joinedAt ? new Date(user.joinedAt) : new Date(),
   }))
 
-  // Get Clerk user data for roles using getUserList (more efficient, fetches in bulk)
   const client = await clerkClient()
   const clerkUsersMap = new Map()
 
   try {
-    // Get the clerkIds we need to fetch
     const clerkIdsToFetch = new Set(plainUsers.map(user => user.clerkId))
     
-    // Fetch users from Clerk using getUserList - fetch enough to cover our users
-    // We'll fetch in pages and match with our database users
     let allClerkUsers: any[] = []
     let hasMore = true
     let offset = 0
-    const limit = 100 // Fetch 100 at a time
+    const limit = 100
 
-    // Fetch Clerk users until we have all the ones we need or run out
     while (hasMore && allClerkUsers.length < 500) {
       const response = await client.users.getUserList({
         limit,
@@ -75,7 +68,6 @@ export default async function AdminDashboard(params: {
 
       allClerkUsers = allClerkUsers.concat(response.data)
       
-      // Check if we have all the users we need
       const fetchedIds = new Set(response.data.map((u: any) => u.id))
       const neededIds = Array.from(clerkIdsToFetch)
       const allFound = neededIds.every(id => fetchedIds.has(id))
@@ -87,15 +79,12 @@ export default async function AdminDashboard(params: {
       }
     }
 
-    // Create a map of fetched Clerk users by their ID
     allClerkUsers.forEach((clerkUser) => {
       if (clerkIdsToFetch.has(clerkUser.id)) {
         clerkUsersMap.set(clerkUser.id, clerkUser)
       }
     })
   } catch (error) {
-    // If we can't fetch Clerk users, continue without roles
-    // Users will show "No role" but role management buttons will still work
     console.warn(`Could not fetch Clerk users: ${error instanceof Error ? error.message : 'unknown error'}`)
   }
 

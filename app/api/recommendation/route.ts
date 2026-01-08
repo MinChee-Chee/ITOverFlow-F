@@ -57,7 +57,6 @@ async function embedQuery(text: string) {
 
 export async function POST(req: Request) {
   try {
-    // Get clerkId early to ensure auth context is available
     const { userId: clerkId } = await auth();
     
     const body = await req.json();
@@ -65,7 +64,6 @@ export async function POST(req: Request) {
     const topK = Number(body?.topK ?? 5);
     const collectionName = process.env.CHROMA_COLLECTION || "questions";
 
-    // Validate query
     if (!query || query.length === 0) {
       return NextResponse.json({ error: "Query is required" }, { status: 400 });
     }
@@ -74,7 +72,6 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Query is too long. Maximum length is 1000 characters." }, { status: 400 });
     }
     
-    // Validate topK
     if (isNaN(topK) || topK < 1 || topK > 20) {
       return NextResponse.json({ error: "topK must be a number between 1 and 20" }, { status: 400 });
     }
@@ -111,7 +108,6 @@ export async function POST(req: Request) {
       console.error('[Recommendation] Embedding error:', embedError);
       const errorMessage = embedError?.message || 'Failed to process query';
       
-      // Check if it's an API key issue
       if (errorMessage.includes('API key') || errorMessage.includes('temporarily unavailable')) {
         return NextResponse.json(
           {
@@ -123,7 +119,6 @@ export async function POST(req: Request) {
         );
       }
       
-      // Generic embedding error
       return NextResponse.json(
         {
           error: 'AI recommendation service is temporarily unavailable. Please try again later.',
@@ -153,135 +148,86 @@ export async function POST(req: Request) {
 
     console.log(`ChromaDB returned ${ids.length} results for query: "${query}"`);
 
-    /**
-     * Improved similarity score calculation
-     * Handles both cosine distance and L2/Euclidean distance
-     * Uses normalized scoring relative to the best match
-     */
     function calculateSimilarityScores(distances: number[]): number[] {
       if (!distances || distances.length === 0) {
         return [];
       }
 
-      // Filter out invalid distances
       const validDistances = distances.filter(d => d !== null && d !== undefined && !isNaN(d) && isFinite(d));
       
       if (validDistances.length === 0) {
         return distances.map(() => 0);
       }
 
-      // Find minimum distance (best match)
       const minDistance = Math.min(...validDistances);
       const maxDistance = Math.max(...validDistances);
       const range = maxDistance - minDistance;
       
-      // Handle case where all distances are the same
       const allSame = range < 0.0001;
       if (allSame) {
-        // If all distances are essentially the same, give them equal scores
-        // Best match gets 100, others get slightly less to maintain ranking
         return validDistances.map((distance, index) => {
           if (index === 0) return 100;
-          return Math.max(95, 100 - (index * 0.5)); // Slight decrease for ranking
+          return Math.max(95, 100 - (index * 0.5));
         });
       }
       
-      // Detect distance metric type based on value range
-      // Cosine distance typically ranges 0-2 (where 0 = identical, 2 = opposite)
-      // L2/Euclidean distance can be much larger
       const isLikelyCosine = maxDistance <= 2.5;
       
-      // Calculate similarity scores
       const similarities = validDistances.map((distance) => {
         if (isLikelyCosine) {
-          // Cosine distance: distance = 1 - cosine_similarity
-          // For normalized embeddings, cosine similarity ranges -1 to 1
-          // So distance ranges 0 to 2, where 0 = identical, 2 = opposite
-          
-          // Calculate base cosine similarity (can be negative for very different vectors)
           const cosineSimilarity = 1 - distance;
           
-          // Handle edge case when minDistance >= 1 (all vectors are quite different)
           if (minDistance >= 1) {
-            // All distances are >= 1, meaning cosine similarity <= 0
-            // Normalize based on distance from best match
             if (range < 0.001) {
-              // Range is too small, use equal scores
               return distance === minDistance ? 100 : 50;
             }
-            // Use inverse normalization: closer to minDistance = higher score
             const distanceFromBest = distance - minDistance;
-            const normalizedDistance = distanceFromBest / range; // 0 to 1
-            // Best match gets 100, worst gets lower score
+            const normalizedDistance = distanceFromBest / range;
             return Math.max(0, Math.min(100, 100 * (1 - normalizedDistance * 0.8)));
           }
           
-          // Normal case: minDistance < 1
-          // Calculate base similarity (clamp to 0-1 range)
           const baseSimilarity = Math.max(0, Math.min(1, cosineSimilarity));
           
-          // Handle edge case when range is very small
           if (range < 0.001) {
-            // All distances are very close, use base similarity directly
             return Math.max(0, Math.min(100, baseSimilarity * 100));
           }
           
-          // Normalize relative to the best match
           let normalizedSimilarity: number;
           
           if (minDistance === 0) {
-            // Best match is perfect (distance = 0, cosine_similarity = 1)
             normalizedSimilarity = baseSimilarity;
           } else {
-            // Best match has cosine similarity = 1 - minDistance
             const bestCosineSimilarity = 1 - minDistance;
             
-            // Avoid division by zero
             if (bestCosineSimilarity <= 0) {
-              // Best match is also negative/zero, use distance-based normalization
               const distanceFromBest = distance - minDistance;
               const normalizedDistance = distanceFromBest / range;
               normalizedSimilarity = Math.max(0, 1 - normalizedDistance);
             } else {
-              // Normalize: best gets 1.0, others scale proportionally
               normalizedSimilarity = baseSimilarity / bestCosineSimilarity;
-              // Clamp to prevent values > 1 when current similarity > best
               normalizedSimilarity = Math.min(1, normalizedSimilarity);
             }
           }
           
           return Math.max(0, Math.min(100, normalizedSimilarity * 100));
         } else {
-          // L2/Euclidean distance: larger distance = less similar
-          
-          // Handle edge case when range is very small
           if (range < 0.001) {
-            // All distances are essentially the same
             return distance === minDistance ? 100 : 50;
           }
           
-          // Normalize distance to 0-1 range
           let normalizedDistance: number;
           if (minDistance === 0) {
-            // Best match is at 0, normalize directly
-            normalizedDistance = distance / (maxDistance + 0.001); // +0.001 to avoid division by zero
+            normalizedDistance = distance / (maxDistance + 0.001);
           } else {
-            // Normalize based on range
             normalizedDistance = (distance - minDistance) / range;
           }
           
-          // Clamp normalized distance to 0-1
           normalizedDistance = Math.max(0, Math.min(1, normalizedDistance));
-          
-          // Use exponential decay for smoother distribution
-          // When normalizedDistance = 0 (best match), similarity = 100
-          // When normalizedDistance = 1 (worst match), similarity approaches 0
           const similarity = Math.exp(-normalizedDistance * 2) * 100;
           return Math.max(0, Math.min(100, similarity));
         }
       });
 
-      // Ensure we return the same length as input
       const result: number[] = [];
       let simIdx = 0;
       for (let i = 0; i < distances.length; i++) {
@@ -295,10 +241,7 @@ export async function POST(req: Request) {
       return result;
     }
 
-    // Calculate similarity scores
     const similarityScores = calculateSimilarityScores(distances);
-
-    // Fetch question titles from MongoDB
     let questionTitles: Record<string, { 
       title: string; 
       content?: string;
@@ -310,14 +253,11 @@ export async function POST(req: Request) {
     }> = {};
     if (ids.length > 0) {
       try {
-        // Ensure MongoDB connection is stable
         await connectToDatabase();
         
-        // Convert string IDs to ObjectIds, filtering out invalid ones
         const validObjectIds = ids
           .map((id: string) => {
             try {
-              // Check if it's already a valid ObjectId format
               if (mongoose.Types.ObjectId.isValid(id)) {
                 return new mongoose.Types.ObjectId(id);
               }
@@ -356,11 +296,8 @@ export async function POST(req: Request) {
         }
       } catch (err) {
         console.error("Failed to fetch question titles from MongoDB:", err);
-        // Continue without titles - will use fallbacks in UI
       }
     }
-
-    // Enrich metadatas with titles and additional data from MongoDB
     const enrichedMetadatas = ids.map((id: string, idx: number) => {
       if (!id || typeof id !== 'string') {
         return {
@@ -399,32 +336,25 @@ export async function POST(req: Request) {
       similarities: similarityScores,
     };
 
-    // Save history asynchronously (non-blocking)
-    // Use the clerkId we got earlier to avoid auth context issues
     if (clerkId && query && Array.isArray(ids) && ids.length > 0) {
-      // Ensure database is connected (it should be from earlier, but ensure it)
       try {
         await connectToDatabase();
         
-        // Prepare history data with validation
         const historyData = {
           clerkId,
-          query: query.trim().substring(0, 1000), // Limit query length to prevent DB issues
+          query: query.trim().substring(0, 1000),
           topK: Math.min(Math.max(topK, 1), 20),
           resultIds: ids
             .filter((id): id is string => id !== null && id !== undefined && typeof id === 'string')
-            .slice(0, 100), // Limit to prevent excessive data
+            .slice(0, 100),
           distances: Array.isArray(distances) 
             ? distances
                 .filter((d): d is number => d !== null && d !== undefined && typeof d === 'number' && !isNaN(d))
-                .slice(0, 100) // Match resultIds length
+                .slice(0, 100)
             : undefined,
         };
         
-        // Only save if we have at least a query and valid structure
         if (historyData.query && historyData.query.length > 0 && Array.isArray(historyData.resultIds) && historyData.resultIds.length > 0) {
-          // Save history in background without blocking the response
-          // Add timeout to prevent hanging promises
           const savePromise = RecommendationHistory.create(historyData);
           const timeoutPromise = new Promise((_, reject) => 
             setTimeout(() => reject(new Error('History save timeout')), 5000)
@@ -432,11 +362,10 @@ export async function POST(req: Request) {
           
           Promise.race([savePromise, timeoutPromise])
             .then((savedHistory: any) => {
-              console.log(`✅ Successfully saved recommendation history for clerkId: ${clerkId}, historyId: ${savedHistory?._id}, query: "${historyData.query.substring(0, 50)}", results: ${historyData.resultIds.length}`);
+              console.log(`Successfully saved recommendation history for clerkId: ${clerkId}, historyId: ${savedHistory?._id}, query: "${historyData.query.substring(0, 50)}", results: ${historyData.resultIds.length}`);
             })
             .catch((err) => {
-              // Log error but don't fail the request
-              console.error("❌ Failed to save recommendation history:", err);
+              console.error("Failed to save recommendation history:", err);
               console.error("Error details:", {
                 clerkId,
                 query: historyData.query.substring(0, 50),
@@ -455,7 +384,6 @@ export async function POST(req: Request) {
           });
         }
       } catch (dbErr) {
-        // Log but don't fail the request
         console.error("Database connection error when saving history:", dbErr);
       }
     } else {
