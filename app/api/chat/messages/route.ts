@@ -15,9 +15,8 @@ const sendMessageSchema = z.object({
 
 export async function POST(req: NextRequest) {
   try {
-    // Set timeout for the request
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
 
     try {
       const { userId } = await auth();
@@ -27,7 +26,6 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
       }
 
-      // Validate and sanitize request body
       const validation = await validateAndSanitizeBody(req, sendMessageSchema);
       if (validation instanceof NextResponse) {
         clearTimeout(timeoutId);
@@ -36,7 +34,6 @@ export async function POST(req: NextRequest) {
 
       const { content, chatGroupId } = validation.data;
 
-      // Content moderation: Check for abusive or inappropriate content
       const contentValidation = validateMessageContent(content);
       if (!contentValidation.valid) {
         clearTimeout(timeoutId);
@@ -50,7 +47,6 @@ export async function POST(req: NextRequest) {
         );
       }
 
-      // Get user from database
       const user = await getUserById({ userId });
       if (!user) {
         clearTimeout(timeoutId);
@@ -64,8 +60,6 @@ export async function POST(req: NextRequest) {
         path: '/chat',
       });
 
-      // Broadcast message via Pusher Channels
-      // Ensure all ObjectIds are converted to strings and dates are ISO strings
       const messageData = {
         _id: String(message._id),
         content: message.content,
@@ -90,7 +84,6 @@ export async function POST(req: NextRequest) {
 
       if (!triggerResult.ok) {
         console.error('[Channels] Failed to trigger message event:', triggerResult.reason);
-        // Continue even if Pusher fails
       }
 
       clearTimeout(timeoutId);
@@ -126,14 +119,12 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Valid chatGroupId is required' }, { status: 400 });
     }
 
-    // Get user from database if authenticated (single lookup for both ban check and userId)
     let banStatus = { banned: false };
     let userDbId: string | undefined;
     if (userId) {
       const user = await getUserById({ userId });
       if (user) {
         userDbId = user._id.toString();
-        // Check ban status (userDbId is guaranteed to be string here)
         if (userDbId) {
           banStatus = await isUserBannedFromChatGroup(chatGroupId, userDbId);
         }

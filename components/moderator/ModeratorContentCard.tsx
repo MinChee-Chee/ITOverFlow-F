@@ -151,10 +151,10 @@ export default function ModeratorContentCard({ item }: ModeratorContentCardProps
         </div>
 
         <div className="flex items-center gap-4 text-xs text-dark400_light700 flex-shrink-0">
-          <span>👍 {item.upvotes}</span>
-          <span>👎 {item.downvotes}</span>
-          {item.views !== undefined && <span>👁️ {item.views}</span>}
-          {item.answers !== undefined && <span>💬 {item.answers}</span>}
+          <span>{item.upvotes}</span>
+          <span>{item.downvotes}</span>
+          {item.views !== undefined && <span>{item.views}</span>}
+          {item.answers !== undefined && <span>{item.answers}</span>}
         </div>
 
         {item.tags && item.tags.length > 0 && (

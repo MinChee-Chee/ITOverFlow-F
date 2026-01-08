@@ -41,44 +41,34 @@ const Pagination = ({pageNumber, isNext, totalPages}: Props) => {
     router.push(newUrl)
   }
 
-  // Calculate which page numbers to show
   const pageNumbers = useMemo(() => {
     const pages: (number | string)[] = [];
     const currentPage = pageNumber;
     
-    // Show pages around current page (current - 1, current, current + 1)
     const startPage = Math.max(1, currentPage - 1);
     const endPage = totalPages 
       ? Math.min(totalPages, currentPage + 1)
       : (isNext ? currentPage + 1 : currentPage);
 
-    // Always show first page if we're not on the first few pages
     if (currentPage > 2) {
       pages.push(1);
-      // Show ellipsis if there's a gap between page 1 and startPage
-      // Gap exists when startPage > 2 (meaning we're showing pages starting from 3 or later)
       if (startPage > 2) {
         pages.push('...');
       }
     }
 
-    // Add pages around current, avoiding duplicates with page 1
     for (let i = startPage; i <= endPage; i++) {
       if (i !== 1 || currentPage <= 2) {
         pages.push(i);
       }
     }
 
-    // Show ellipsis and last page if we have totalPages
     if (totalPages && endPage < totalPages) {
-      // Show ellipsis if there's a gap
       if (endPage < totalPages - 1) {
         pages.push('...');
       }
-      // Always show last page if we know it
       pages.push(totalPages);
     } else if (isNext && !totalPages) {
-      // If no totalPages but we know there's more, show ellipsis
       pages.push('...');
     }
 

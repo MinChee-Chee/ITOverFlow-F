@@ -11,7 +11,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Parallel: check roles and parse body
     const [roleCheck, body] = await Promise.all([
       Promise.all([checkRole('moderator'), checkRole('admin')]),
       req.json().catch(() => null),
@@ -29,7 +28,6 @@ export async function POST(req: NextRequest) {
 
     const { name, description, tags } = body;
 
-    // Validate input
     if (!name || typeof name !== 'string' || name.trim().length === 0) {
       return NextResponse.json({ error: 'Name is required' }, { status: 400 });
     }
@@ -42,7 +40,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Maximum 4 tags allowed' }, { status: 400 });
     }
 
-    // Get user from database to get the user ID
     const { getUserById } = await import('@/lib/actions/user.action');
     const user = await getUserById({ userId });
     
@@ -68,7 +65,6 @@ export async function POST(req: NextRequest) {
 
 export async function GET(req: NextRequest) {
   try {
-    // Get auth data once
     const authData = await auth();
     const { userId } = authData;
     const sessionClaims = authData.sessionClaims as any;
@@ -77,41 +73,28 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Check roles in parallel (same as POST method)
     const [isModerator, isAdmin] = await Promise.all([
       checkRole('moderator'),
       checkRole('admin'),
     ]);
 
-    // Allow access if user is moderator or admin
     if (isModerator || isAdmin) {
-      // User has access via role, proceed
     } else {
-      // For non-moderators/admins, check subscription status
-      // Clerk's Protect component on the frontend already validates subscription,
-      // but we need server-side verification for security
       let hasSubscription = false;
       
       try {
-        // Try Clerk's has() function for plan/feature checking
-        // Note: This may not work with all Clerk plans, so we have fallbacks
         hasSubscription = await authData.has({ plan: 'groupchat' });
       } catch (error) {
-        // Fallback: Check session claims for subscription metadata
-        // Clerk may store subscription info in various locations
         const subscriptionData = sessionClaims?.subscription || 
                                 sessionClaims?.metadata?.subscription ||
                                 sessionClaims?.orgMetadata?.subscription ||
                                 sessionClaims?.publicMetadata?.subscription;
         
         if (subscriptionData) {
-          // Check if subscription is active
-          // A subscription can be "canceled" but still "active" until the end date
           const status = subscriptionData.status || subscriptionData.state;
           const plan = subscriptionData.plan || subscriptionData.planId || subscriptionData.planName;
           const endDate = subscriptionData.endDate || subscriptionData.currentPeriodEnd;
           
-          // Check if plan matches and subscription is active (even if canceled but not expired)
           const isPlanMatch = plan && (
             plan === 'groupchat' || 
             String(plan).includes('groupchat') || 
@@ -121,10 +104,8 @@ export async function GET(req: NextRequest) {
           const isActiveStatus = status === 'active' || status === 'trialing';
           const isNotExpired = !endDate || new Date(endDate) > new Date();
           
-          // Allow access if plan matches and (status is active OR not expired)
           hasSubscription = isPlanMatch && (isActiveStatus || isNotExpired);
         } else {
-          // Log for debugging - subscription data not found in expected locations
           console.log('Subscription check: No subscription data found in session claims for user:', userId);
           console.log('Available session claims keys:', Object.keys(sessionClaims || {}));
         }

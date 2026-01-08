@@ -16,7 +16,6 @@ export async function createComment(params: CreateCommentParams) {
 
     const newComment = await Comment.create({ content, author, answer: answerId });
     
-    // Get the answer to find the question and answer author
     const answer = await Answer.findById(answerId)
       .populate("author", "clerkId")
       .populate("question", "title");
@@ -27,13 +26,11 @@ export async function createComment(params: CreateCommentParams) {
 
     const commentingUser = await User.findById(author);
 
-    // Notify the answer author if they're different from the commenter
     if (
       answer.author &&
       answer.author._id.toString() !== author.toString() &&
       (answer.author as any).clerkId
     ) {
-      // Send notification non-blocking
       notifyUserByClerkId({
         clerkId: (answer.author as any).clerkId,
         title: `${commentingUser?.name ?? "Someone"} commented on your answer`,
@@ -65,7 +62,7 @@ export async function getComments(params: GetCommentsParams) {
 
     const comments = await Comment.find({ answer: answerId })
       .populate("author", "_id clerkId name picture")
-      .sort({ createdAt: 1 }); // Sort by oldest first
+      .sort({ createdAt: 1 });
 
     return { comments };
   } catch (error) {

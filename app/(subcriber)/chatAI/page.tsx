@@ -105,7 +105,6 @@ export default function ChatAIPage() {
     setInput("")
 
     try {
-      // Prepare messages for API (include conversation history)
       const apiMessages = updatedMessages.map(msg => ({
         role: msg.role,
         content: msg.content,
@@ -150,25 +149,19 @@ export default function ChatAIPage() {
     }
   }
 
-  // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [messages])
 
-  // Unified initialization flow
   useEffect(() => {
     setMounted(true)
-    // Reset refs on mount to ensure fresh checks on navigation
     hasCheckedRole.current = false
     hasRedirected.current = false
   }, [])
 
-  // Handle authentication and role checking in a single, stable flow
   useEffect(() => {
-    // Wait for mount and Clerk to be ready
     if (!mounted || !isLoaded) return
 
-    // Handle unauthenticated users
     if (!isSignedIn) {
       if (!hasRedirected.current) {
         hasRedirected.current = true
@@ -179,8 +172,6 @@ export default function ChatAIPage() {
       return
     }
 
-    // Reset and check role on each mount/navigation
-    // This ensures fresh checks when navigating between pages
     hasCheckedRole.current = false
     setIsPrivileged(false)
     setRoleLoading(true)

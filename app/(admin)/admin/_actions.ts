@@ -8,7 +8,6 @@ import { updateUser, deleteUser } from '@/lib/actions/user.action'
 export async function setRole(formData: FormData) {
   const client = await clerkClient()
 
-  // Check that the user trying to set the Role is an admin
   if (!(await checkRole('admin'))) {
     return
   }
@@ -26,7 +25,6 @@ export async function setRole(formData: FormData) {
 export async function removeRole(formData: FormData) {
   const client = await clerkClient()
 
-  // Check that the user trying to remove the Role is an admin
   if (!(await checkRole('admin'))) {
     return
   }
@@ -96,7 +94,6 @@ export async function deleteUserData(formData: FormData) {
 export async function lockUser(formData: FormData) {
   const client = await clerkClient()
 
-  // Check that the user trying to lock is an admin
   if (!(await checkRole('admin'))) {
     return { error: 'Not authorized' }
   }
@@ -105,7 +102,6 @@ export async function lockUser(formData: FormData) {
     const clerkId = formData.get('clerkId') as string
     const clerkUser = await client.users.getUser(clerkId)
     
-    // Get existing metadata and preserve it
     const existingMetadata = clerkUser.publicMetadata || {}
     
     await client.users.updateUserMetadata(clerkId, {
@@ -126,7 +122,6 @@ export async function lockUser(formData: FormData) {
 export async function unlockUser(formData: FormData) {
   const client = await clerkClient()
 
-  // Check that the user trying to unlock is an admin
   if (!(await checkRole('admin'))) {
     return { error: 'Not authorized' }
   }
@@ -135,7 +130,6 @@ export async function unlockUser(formData: FormData) {
     const clerkId = formData.get('clerkId') as string
     const clerkUser = await client.users.getUser(clerkId)
     
-    // Get existing metadata and preserve it
     const existingMetadata = clerkUser.publicMetadata || {}
     
     await client.users.updateUserMetadata(clerkId, {
@@ -156,7 +150,6 @@ export async function unlockUser(formData: FormData) {
 export async function banUser(formData: FormData) {
   const client = await clerkClient()
 
-  // Check that the user trying to ban is an admin
   if (!(await checkRole('admin'))) {
     return { error: 'Not authorized' }
   }
@@ -165,13 +158,10 @@ export async function banUser(formData: FormData) {
     const clerkId = formData.get('clerkId') as string
     const clerkUser = await client.users.getUser(clerkId)
     
-    // Get existing metadata and preserve it
     const existingMetadata = clerkUser.publicMetadata || {}
     
-    // Ban the user in Clerk to prevent login
     await client.users.banUser(clerkId)
     
-    // Update metadata to track ban status
     await client.users.updateUserMetadata(clerkId, {
       publicMetadata: { 
         ...existingMetadata,
@@ -190,7 +180,6 @@ export async function banUser(formData: FormData) {
 export async function unbanUser(formData: FormData) {
   const client = await clerkClient()
 
-  // Check that the user trying to unban is an admin
   if (!(await checkRole('admin'))) {
     return { error: 'Not authorized' }
   }
@@ -199,13 +188,10 @@ export async function unbanUser(formData: FormData) {
     const clerkId = formData.get('clerkId') as string
     const clerkUser = await client.users.getUser(clerkId)
     
-    // Get existing metadata and preserve it
     const existingMetadata = clerkUser.publicMetadata || {}
     
-    // Unban the user in Clerk to allow login
     await client.users.unbanUser(clerkId)
     
-    // Update metadata to track ban status
     await client.users.updateUserMetadata(clerkId, {
       publicMetadata: { 
         ...existingMetadata,

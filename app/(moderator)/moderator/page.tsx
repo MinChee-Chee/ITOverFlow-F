@@ -23,17 +23,15 @@ export default async function ModeratorPage(params: {
     redirect('/')
   }
 
-  // Get user from database to get the user ID
   const user = await getUserById({ userId })
   if (!user) {
     redirect('/')
   }
 
   const searchParams = await params.searchParams
-  const query = searchParams.q // LocalSearchbar uses 'q' parameter
+  const query = searchParams.q
   const page = Number(searchParams.page) || 1
 
-  // Fetch chat groups created by this moderator
   const { chatGroups, isNext } = await getModeratorChatGroups({
     moderatorId: user._id.toString(),
     searchQuery: query,

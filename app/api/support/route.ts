@@ -4,7 +4,6 @@ import { connectToDatabase } from '@/lib/mongoose';
 import SupportRequest from '@/database/supportRequest.model';
 import { getUserById } from '@/lib/actions/user.action';
 
-// POST - Create a new support request
 export async function POST(req: NextRequest) {
   try {
     const { userId } = await auth();
@@ -19,7 +18,6 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { subject, category, message } = body;
 
-    // Validate input
     if (!subject || !message) {
       return NextResponse.json(
         { error: 'Subject and message are required' },
@@ -51,7 +49,6 @@ export async function POST(req: NextRequest) {
 
     await connectToDatabase();
 
-    // Get user from database
     const user = await getUserById({ userId });
     if (!user) {
       return NextResponse.json(
@@ -60,7 +57,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Create support request
     const supportRequest = await SupportRequest.create({
       userId: user._id,
       clerkId: userId,
@@ -92,7 +88,6 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// GET - Get support requests (admin only)
 export async function GET(req: NextRequest) {
   try {
     const { userId } = await auth();
@@ -103,8 +98,6 @@ export async function GET(req: NextRequest) {
         { status: 401 }
       );
     }
-
-    // Check if user is admin
     const { checkRole } = await import('@/utlis/roles');
     const isAdmin = await checkRole('admin');
 
@@ -132,10 +125,8 @@ export async function GET(req: NextRequest) {
       query.category = category;
     }
 
-    // Calculate pagination
     const skip = (page - 1) * pageSize;
 
-    // Get support requests with user information
     const supportRequests = await SupportRequest.find(query)
       .populate('userId', 'name username email picture')
       .populate('respondedBy', 'name username')
@@ -144,7 +135,6 @@ export async function GET(req: NextRequest) {
       .limit(pageSize)
       .lean() as any[];
 
-    // Get total count
     const total = await SupportRequest.countDocuments(query);
 
     return NextResponse.json({

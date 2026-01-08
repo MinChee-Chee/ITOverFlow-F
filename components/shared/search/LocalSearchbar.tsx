@@ -37,29 +37,22 @@ const LocalSearchbar = ({
     return `local-search-${normalizedRoute || 'home'}`;
   }, [route]);
 
-  // Auto-refresh for home page only (every 10 seconds)
   useEffect(() => {
-    // Only enable auto-refresh on home page
     if (route !== '/' || pathname !== '/') {
       return;
     }
 
     const intervalId = setInterval(() => {
-      // Refresh the page by updating the URL with current search params
-      // This will trigger a re-render of the server component
-      // Use router.refresh() to refresh the current route without navigation
       router.refresh();
-    }, 10000); // 10 seconds
+    }, 10000);
 
     return () => clearInterval(intervalId);
   }, [route, pathname, router]);
 
-  // Sync search state with URL query param when it changes externally (only on mount or external changes)
   useEffect(() => {
     const urlQuery = searchParams.get('q');
     const currentParamsString = searchParams.toString();
     
-    // Only sync if URL query changed externally (not from our own update)
     if (isUpdatingUrlRef.current) {
       isUpdatingUrlRef.current = false;
       previousQueryRef.current = urlQuery;
@@ -67,36 +60,27 @@ const LocalSearchbar = ({
       return;
     }
 
-    // Only update if the actual query value changed (not just the searchParams object reference)
     if (urlQuery !== previousQueryRef.current && urlQuery !== search) {
       setSearch(urlQuery || '');
       previousQueryRef.current = urlQuery;
       previousSearchRef.current = urlQuery || '';
       searchParamsStringRef.current = currentParamsString;
     } else if (currentParamsString !== searchParamsStringRef.current) {
-      // Update ref even if query didn't change, to track params changes
       searchParamsStringRef.current = currentParamsString;
     }
-  }, [query, search]); // Use query (string) instead of searchParams (object)
+  }, [query, search]);
 
-  // Debounce and update URL when search changes (only if user actually typed)
   useEffect(() => {
-    // Skip if search hasn't actually changed from previous value
     if (search === previousSearchRef.current) {
       return;
     }
 
-    // Update the ref immediately to prevent duplicate calls
     previousSearchRef.current = search;
 
     const delayDebounceFn = setTimeout(() => {
-      // Get fresh values to check if URL was updated externally
-      // This prevents race conditions where params change during the debounce delay
       const freshQuery = searchParams.get('q');
       const freshParamsString = searchParams.toString();
       
-      // Only update if search actually changed from URL
-      // This prevents unnecessary updates if URL was already updated
       if (freshQuery === search) {
         return;
       }
