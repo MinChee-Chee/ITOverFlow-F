@@ -173,6 +173,18 @@ export async function POST(req: Request) {
       // Find minimum distance (best match)
       const minDistance = Math.min(...validDistances);
       const maxDistance = Math.max(...validDistances);
+      const range = maxDistance - minDistance;
+      
+      // Handle case where all distances are the same
+      const allSame = range < 0.0001;
+      if (allSame) {
+        // If all distances are essentially the same, give them equal scores
+        // Best match gets 100, others get slightly less to maintain ranking
+        return validDistances.map((distance, index) => {
+          if (index === 0) return 100;
+          return Math.max(95, 100 - (index * 0.5)); // Slight decrease for ranking
+        });
+      }
       
       // Detect distance metric type based on value range
       // Cosine distance typically ranges 0-2 (where 0 = identical, 2 = opposite)
@@ -184,25 +196,88 @@ export async function POST(req: Request) {
         if (isLikelyCosine) {
           // Cosine distance: distance = 1 - cosine_similarity
           // For normalized embeddings, cosine similarity ranges -1 to 1
-          // So distance ranges 0 to 2, where 0 = identical
-          // Convert to similarity: similarity = (1 - distance) * 100
-          // But we normalize relative to the best match for better distribution
-          const baseSimilarity = Math.max(0, 1 - distance);
-          const normalizedSimilarity = minDistance === 0 
-            ? baseSimilarity 
-            : baseSimilarity / (1 - minDistance);
-          return Math.min(100, Math.max(0, normalizedSimilarity * 100));
+          // So distance ranges 0 to 2, where 0 = identical, 2 = opposite
+          
+          // Calculate base cosine similarity (can be negative for very different vectors)
+          const cosineSimilarity = 1 - distance;
+          
+          // Handle edge case when minDistance >= 1 (all vectors are quite different)
+          if (minDistance >= 1) {
+            // All distances are >= 1, meaning cosine similarity <= 0
+            // Normalize based on distance from best match
+            if (range < 0.001) {
+              // Range is too small, use equal scores
+              return distance === minDistance ? 100 : 50;
+            }
+            // Use inverse normalization: closer to minDistance = higher score
+            const distanceFromBest = distance - minDistance;
+            const normalizedDistance = distanceFromBest / range; // 0 to 1
+            // Best match gets 100, worst gets lower score
+            return Math.max(0, Math.min(100, 100 * (1 - normalizedDistance * 0.8)));
+          }
+          
+          // Normal case: minDistance < 1
+          // Calculate base similarity (clamp to 0-1 range)
+          const baseSimilarity = Math.max(0, Math.min(1, cosineSimilarity));
+          
+          // Handle edge case when range is very small
+          if (range < 0.001) {
+            // All distances are very close, use base similarity directly
+            return Math.max(0, Math.min(100, baseSimilarity * 100));
+          }
+          
+          // Normalize relative to the best match
+          let normalizedSimilarity: number;
+          
+          if (minDistance === 0) {
+            // Best match is perfect (distance = 0, cosine_similarity = 1)
+            normalizedSimilarity = baseSimilarity;
+          } else {
+            // Best match has cosine similarity = 1 - minDistance
+            const bestCosineSimilarity = 1 - minDistance;
+            
+            // Avoid division by zero
+            if (bestCosineSimilarity <= 0) {
+              // Best match is also negative/zero, use distance-based normalization
+              const distanceFromBest = distance - minDistance;
+              const normalizedDistance = distanceFromBest / range;
+              normalizedSimilarity = Math.max(0, 1 - normalizedDistance);
+            } else {
+              // Normalize: best gets 1.0, others scale proportionally
+              normalizedSimilarity = baseSimilarity / bestCosineSimilarity;
+              // Clamp to prevent values > 1 when current similarity > best
+              normalizedSimilarity = Math.min(1, normalizedSimilarity);
+            }
+          }
+          
+          return Math.max(0, Math.min(100, normalizedSimilarity * 100));
         } else {
           // L2/Euclidean distance: larger distance = less similar
-          // Use inverse relationship with normalization
-          // Formula: similarity = (1 / (1 + normalized_distance)) * 100
-          const normalizedDistance = minDistance === 0 
-            ? distance 
-            : (distance - minDistance) / (maxDistance - minDistance + 0.001); // +0.001 to avoid division by zero
+          
+          // Handle edge case when range is very small
+          if (range < 0.001) {
+            // All distances are essentially the same
+            return distance === minDistance ? 100 : 50;
+          }
+          
+          // Normalize distance to 0-1 range
+          let normalizedDistance: number;
+          if (minDistance === 0) {
+            // Best match is at 0, normalize directly
+            normalizedDistance = distance / (maxDistance + 0.001); // +0.001 to avoid division by zero
+          } else {
+            // Normalize based on range
+            normalizedDistance = (distance - minDistance) / range;
+          }
+          
+          // Clamp normalized distance to 0-1
+          normalizedDistance = Math.max(0, Math.min(1, normalizedDistance));
           
           // Use exponential decay for smoother distribution
+          // When normalizedDistance = 0 (best match), similarity = 100
+          // When normalizedDistance = 1 (worst match), similarity approaches 0
           const similarity = Math.exp(-normalizedDistance * 2) * 100;
-          return Math.min(100, Math.max(0, similarity));
+          return Math.max(0, Math.min(100, similarity));
         }
       });
 

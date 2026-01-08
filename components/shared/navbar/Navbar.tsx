@@ -30,8 +30,8 @@ const Navbar = () => {
           <GlobalSearch/>
         </Suspense>
 
-        <div className='flex-between gap-5'>
-            <div className="hidden sm:flex">
+        <div className='flex items-center gap-4'>
+            <div className="hidden md:flex items-center">
               <MenubarComponent/>
             </div>
             <Theme/>
