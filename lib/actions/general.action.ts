@@ -27,49 +27,76 @@ export async function globalSearch(params: SearchParams) {
         { model: Answer, searchField: "content", type: "answer" },
         { model: Tag, searchField: "name", type: "tag" },
       ];
-  
+
       const typeLower = type?.toLowerCase();
   
       if (!typeLower || !SearchableTypes.includes(typeLower)) {
-        // Search in all models - use parallel queries for better performance
-        const searchPromises = modelsAndTypes.map(({ model, searchField, type }) =>
-          model
-            .find({ [searchField]: regexQuery })
-            .select(type === "user" ? "_id clerkId name" : type === "answer" ? "_id question content" : `_id ${searchField}`)
+        const searchPromises = modelsAndTypes.map(({ model, searchField, type }) => {
+          let searchQuery: any;
+          
+          if (type === "user") {
+            searchQuery = {
+              $or: [
+                { name: regexQuery },
+                { username: regexQuery },
+                { email: regexQuery },
+              ],
+            };
+          } else {
+            searchQuery = { [searchField]: regexQuery };
+          }
+          
+          return model
+            .find(searchQuery)
+            .select(type === "user" ? "_id clerkId name username" : type === "answer" ? "_id question content" : `_id ${searchField}`)
             .limit(2)
             .lean()
             .then(queryResults =>
               queryResults.map((item: any) => ({
-                title: type === "answer" ? `Answers containing ${query}` : item[searchField],
+                title: type === "answer" ? `Answers containing ${query}` : type === "user" ? (item.name || item.username) : item[searchField],
                 type,
                 id: type === "user" ? item.clerkId : type === "answer" ? item.question : item._id,
               }))
-            )
-        );
+            );
+        });
         
         const searchResults = await Promise.all(searchPromises);
         results = searchResults.flat();
       } else {
-        // Search in specific model (use normalized lowercase type)
         const modelInfo = modelsAndTypes.find((item) => item.type === typeLower);
   
         if (!modelInfo) {
           throw new Error("Invalid search type");
         }
   
+        let searchQuery: any;
+        if (typeLower === "user") {
+          searchQuery = {
+            $or: [
+              { name: regexQuery },
+              { username: regexQuery },
+              { email: regexQuery },
+            ],
+          };
+        } else {
+          searchQuery = { [modelInfo.searchField]: regexQuery };
+        }
+  
         const queryResults = await modelInfo.model
-          .find({ [modelInfo.searchField]: regexQuery })
-          .select(typeLower === "user" ? "_id clerkId name" : typeLower === "answer" ? "_id question content" : `_id ${modelInfo.searchField}`)
+          .find(searchQuery)
+          .select(typeLower === "user" ? "_id clerkId name username" : typeLower === "answer" ? "_id question content" : `_id ${modelInfo.searchField}`)
           .limit(8)
           .lean();
   
         results = queryResults.map((item: any) => {
-          const resultType = typeLower; // always normalized
+          const resultType = typeLower;
 
           return {
             title:
               resultType === "answer"
                 ? `Answers containing ${query}`
+                : resultType === "user"
+                ? (item.name || item.username)
                 : item[modelInfo.searchField],
             type: resultType,
             id:
