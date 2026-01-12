@@ -39,8 +39,30 @@ module.exports = {
 		  "accent-blue": "#1DA1F2",
 		},
 		fontFamily: {
-		  inter: ["var(--font-inter)"],
-		  spaceGrotesk: ["var(--font-spaceGrotesk)"],
+		  sans: [
+			"var(--font-inter)",
+			"ui-sans-serif",
+			"system-ui",
+			"-apple-system",
+			"BlinkMacSystemFont",
+			"Segoe UI",
+			"Roboto",
+			"Helvetica Neue",
+			"Arial",
+			"sans-serif",
+		  ],
+		  inter: [
+			"var(--font-inter)",
+			"ui-sans-serif",
+			"system-ui",
+			"sans-serif",
+		  ],
+		  spaceGrotesk: [
+			"var(--font-spaceGrotesk)",
+			"ui-sans-serif",
+			"system-ui",
+			"sans-serif",
+		  ],
 		},
 		boxShadow: {
 		  "light-100":

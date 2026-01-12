@@ -14,12 +14,18 @@ import { SpeedInsights } from "@vercel/speed-insights/next"
 
 const inter = Inter({
   subsets: ['latin'],
-  weight:['100', '200', '300', '400', '500', '600', '700', '800', '900'],
+  weight: ['100', '200', '300', '400', '500', '600', '700', '800', '900'],
+  display: 'swap',
+  variable: '--font-inter',
+  adjustFontFallback: true,
 })
 
 const spaceGrotesk = SpaceGroktest({
   subsets: ['latin'],
-  weight:['300', '400', '500', '600', '700'],
+  weight: ['300', '400', '500', '600', '700'],
+  display: 'swap',
+  variable: '--font-spaceGrotesk',
+  adjustFontFallback: true,
 })
 
 export const metadata: Metadata = {
@@ -58,7 +64,7 @@ export default function RootLayout({
             }}
           />
         </head>
-        <body className={`${inter.className} ${spaceGrotesk.className} background-light850_dark100`}>
+        <body className={`${inter.variable} ${spaceGrotesk.variable} font-sans background-light850_dark100`}>
         <ClerkProvider
           appearance={{
             elements: {
