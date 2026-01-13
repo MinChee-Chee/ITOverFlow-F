@@ -219,56 +219,60 @@ export const fetcher = async (url: string) => {
 }
 
 /**
- * Calculate similarity score from distance (client-side fallback)
+ * Calculate similarity score from ChromaDB distance (client-side fallback)
  * This matches the backend calculation for consistency
  * 
+ * Uses relative ranking when allDistances is provided: the best result gets 
+ * 95-100%, and others are scaled relative to the best and worst results.
+ * 
  * @param distance - The distance value from ChromaDB
- * @param allDistances - Optional array of all distances for normalization
+ * @param allDistances - Array of all distances for relative scoring
  * @returns Similarity score from 0-100, or null if invalid
  */
 export const calculateSimilarityFromDistance = (
   distance: number | null | undefined,
   allDistances?: number[]
 ): number | null => {
+  // Handle invalid values
   if (distance === null || distance === undefined || isNaN(distance) || !isFinite(distance)) {
     return null;
   }
 
-  // If we have all distances, use normalized approach
+  // If we have all distances, use relative ranking
   if (allDistances && allDistances.length > 0) {
-    const validDistances = allDistances.filter(d => d !== null && d !== undefined && !isNaN(d) && isFinite(d));
+    const validDistances = allDistances.filter(d => 
+      d !== null && d !== undefined && !isNaN(d) && isFinite(d)
+    );
+    
     if (validDistances.length > 0) {
       const minDistance = Math.min(...validDistances);
       const maxDistance = Math.max(...validDistances);
-      const isLikelyCosine = maxDistance <= 2.5;
+      const range = maxDistance - minDistance;
 
-      if (isLikelyCosine) {
-        // Cosine distance: similarity = (1 - distance) * 100, normalized
-        const baseSimilarity = Math.max(0, 1 - distance);
-        const normalizedSimilarity = minDistance === 0 
-          ? baseSimilarity 
-          : baseSimilarity / (1 - minDistance);
-        return Math.min(100, Math.max(0, normalizedSimilarity * 100));
-      } else {
-        // L2/Euclidean distance: use exponential decay
-        const normalizedDistance = minDistance === 0 
-          ? distance 
-          : (distance - minDistance) / (maxDistance - minDistance + 0.001);
-        const similarity = Math.exp(-normalizedDistance * 2) * 100;
-        return Math.min(100, Math.max(0, similarity));
+      // If all distances are the same, return high score
+      if (range < 0.0001) {
+        return 95;
       }
+
+      // Normalize: how far is this distance from the best (min)?
+      const normalizedPosition = (distance - minDistance) / range;
+      
+      // Map to score: best gets ~95%, worst gets ~60%
+      const similarity = 95 - (normalizedPosition * 35);
+      return Math.max(0, Math.min(100, similarity));
     }
   }
 
-  // Fallback: simple calculation without normalization
-  if (distance < 0) {
-    return Math.max(0, Math.min(100, (1 + distance) * 100));
-  } else if (distance <= 2) {
-    // Likely cosine distance
-    return Math.max(0, Math.min(100, (1 - distance) * 100));
+  // Fallback for single distance without context
+  // Use a reasonable default assuming typical cosine distance range
+  if (distance <= 0.5) {
+    return 95;
+  } else if (distance <= 1.0) {
+    return 85 - ((distance - 0.5) * 30);
+  } else if (distance <= 1.5) {
+    return 70 - ((distance - 1.0) * 20);
   } else {
-    // Likely L2 distance - use exponential decay
-    return Math.max(0, Math.min(100, 100 * Math.exp(-distance / 2)));
+    return Math.max(50, 60 - ((distance - 1.5) * 20));
   }
 };
 

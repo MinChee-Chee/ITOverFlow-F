@@ -146,14 +146,25 @@ export async function POST(req: Request) {
     const rawDistances = Array.isArray(results.distances) && Array.isArray(results.distances[0]) ? results.distances[0] : [];
     const distances: number[] = rawDistances.filter((dist): dist is number => dist !== null && dist !== undefined && typeof dist === 'number' && !isNaN(dist));
 
-    console.log(`ChromaDB returned ${ids.length} results for query: "${query}"`);
+    console.log(`ChromaDB returned ${ids.length} results for query: "${query}", distances:`, distances.slice(0, 5));
 
+    /**
+     * Calculate similarity scores from ChromaDB distances.
+     * 
+     * Uses relative ranking: the best result gets 95-100%, and others are scaled
+     * relative to the best and worst results in the set.
+     * 
+     * This approach works regardless of the absolute distance values, which can
+     * vary significantly based on the embedding model and query complexity.
+     */
     function calculateSimilarityScores(distances: number[]): number[] {
       if (!distances || distances.length === 0) {
         return [];
       }
 
-      const validDistances = distances.filter(d => d !== null && d !== undefined && !isNaN(d) && isFinite(d));
+      const validDistances = distances.filter(d => 
+        d !== null && d !== undefined && !isNaN(d) && isFinite(d)
+      );
       
       if (validDistances.length === 0) {
         return distances.map(() => 0);
@@ -162,83 +173,30 @@ export async function POST(req: Request) {
       const minDistance = Math.min(...validDistances);
       const maxDistance = Math.max(...validDistances);
       const range = maxDistance - minDistance;
-      
-      const allSame = range < 0.0001;
-      if (allSame) {
-        return validDistances.map((distance, index) => {
-          if (index === 0) return 100;
-          return Math.max(95, 100 - (index * 0.5));
-        });
-      }
-      
-      const isLikelyCosine = maxDistance <= 2.5;
-      
-      const similarities = validDistances.map((distance) => {
-        if (isLikelyCosine) {
-          const cosineSimilarity = 1 - distance;
-          
-          if (minDistance >= 1) {
-            if (range < 0.001) {
-              return distance === minDistance ? 100 : 50;
-            }
-            const distanceFromBest = distance - minDistance;
-            const normalizedDistance = distanceFromBest / range;
-            return Math.max(0, Math.min(100, 100 * (1 - normalizedDistance * 0.8)));
-          }
-          
-          const baseSimilarity = Math.max(0, Math.min(1, cosineSimilarity));
-          
-          if (range < 0.001) {
-            return Math.max(0, Math.min(100, baseSimilarity * 100));
-          }
-          
-          let normalizedSimilarity: number;
-          
-          if (minDistance === 0) {
-            normalizedSimilarity = baseSimilarity;
-          } else {
-            const bestCosineSimilarity = 1 - minDistance;
-            
-            if (bestCosineSimilarity <= 0) {
-              const distanceFromBest = distance - minDistance;
-              const normalizedDistance = distanceFromBest / range;
-              normalizedSimilarity = Math.max(0, 1 - normalizedDistance);
-            } else {
-              normalizedSimilarity = baseSimilarity / bestCosineSimilarity;
-              normalizedSimilarity = Math.min(1, normalizedSimilarity);
-            }
-          }
-          
-          return Math.max(0, Math.min(100, normalizedSimilarity * 100));
-        } else {
-          if (range < 0.001) {
-            return distance === minDistance ? 100 : 50;
-          }
-          
-          let normalizedDistance: number;
-          if (minDistance === 0) {
-            normalizedDistance = distance / (maxDistance + 0.001);
-          } else {
-            normalizedDistance = (distance - minDistance) / range;
-          }
-          
-          normalizedDistance = Math.max(0, Math.min(1, normalizedDistance));
-          const similarity = Math.exp(-normalizedDistance * 2) * 100;
-          return Math.max(0, Math.min(100, similarity));
-        }
-      });
 
-      const result: number[] = [];
-      let simIdx = 0;
-      for (let i = 0; i < distances.length; i++) {
-        if (distances[i] !== null && distances[i] !== undefined && !isNaN(distances[i]) && isFinite(distances[i])) {
-          result.push(similarities[simIdx++]);
-        } else {
-          result.push(0);
+      return distances.map((distance, index) => {
+        // Handle invalid values
+        if (distance === null || distance === undefined || isNaN(distance) || !isFinite(distance)) {
+          return 0;
         }
-      }
-      
-      return result;
+
+        // If all distances are the same, give decreasing scores by rank
+        if (range < 0.0001) {
+          // Best result gets 95%, others decrease slightly
+          return Math.max(70, 95 - (index * 2));
+        }
+
+        // Normalize: how far is this distance from the best (min)?
+        // 0 = best match, 1 = worst match in this result set
+        const normalizedPosition = (distance - minDistance) / range;
+        
+        // Map to score: best gets ~95%, worst gets ~60%
+        // This ensures all returned results show as "relevant" since ChromaDB
+        // already filtered for the most similar items
+        const similarity = 95 - (normalizedPosition * 35);
+        
+        return Math.max(0, Math.min(100, similarity));
+      });
     }
 
     const similarityScores = calculateSimilarityScores(distances);
