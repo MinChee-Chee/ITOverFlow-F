@@ -185,7 +185,7 @@ const Question = ({type, mongoUserId, questionDetails }: Props) => {
                   toolbar: 
                   'undo redo | ' + 'blocks |' +
                   'codesample | bold italic forecolor | alignleft aligncenter |' +
-                  'alignright alignjustify | bullist numlist',
+                  'alignright alignjustify | bullist numlist |link image media ',
                   content_style: mode === 'dark' 
                     ? 'body { font-family:Inter; font-size:16px; background-color: #151821; color: #FFFFFF; } p, div, span { color: #FFFFFF; }'
                     : 'body { font-family:Inter; font-size:16px; background-color: #FFFFFF; color: #000000; } p, div, span { color: #000000; }',
